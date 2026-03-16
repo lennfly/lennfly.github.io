@@ -68,23 +68,6 @@
       box-shadow: var(--shadow-strong);
     }
 
-    .sidebar-top {
-      display: flex;
-      justify-content: flex-start;
-      margin-bottom: 20px;
-    }
-
-    .sidebar-lang {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px;
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      background: var(--accent-light);
-      box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
-    }
-
     .mobile-menu-toggle {
       display: none;
       width: 100%;
@@ -115,7 +98,10 @@
       display: block;
     }
 
-    .phase-list { display: grid; gap: 16px; }
+    .phase-list {
+      display: grid;
+      gap: 16px;
+    }
 
     .phase-card {
       border: 1px solid var(--border-soft);
@@ -148,6 +134,7 @@
       justify-content: center;
       box-shadow: 0 2px 10px rgba(91,112,98,0.06);
       cursor: grab;
+      flex: 0 0 auto;
     }
 
     .phase-meta {
@@ -198,7 +185,6 @@
     }
 
     .chip,
-    .lang-btn,
     .stop-btn,
     .duration-btn,
     .start-btn {
@@ -208,20 +194,6 @@
       cursor: pointer;
       font: inherit;
       transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-    }
-
-    .lang-btn {
-      border-radius: 999px;
-      padding: 10px 16px;
-      font-size: 14px;
-      color: #5f7062;
-      background: transparent;
-    }
-
-    .lang-btn.active {
-      background: var(--accent);
-      color: var(--button-text);
-      box-shadow: 0 4px 14px rgba(111,140,114,0.18);
     }
 
     .chip {
@@ -310,13 +282,11 @@
       border-radius: 50%;
       background: radial-gradient(circle at center,
         rgba(var(--orb-rgb), 0.82) 0%,
-        rgba(var(--orb-rgb), 0.68) 34%,
-        rgba(var(--orb-rgb), 0.42) 60%,
-        rgba(var(--orb-rgb), 0.18) 80%,
-        rgba(var(--orb-rgb), 0.06) 92%,
+        rgba(var(--orb-rgb), 0.55) 45%,
+        rgba(var(--orb-rgb), 0.25) 75%,
         transparent 100%);
-      filter: blur(14px);
-      box-shadow: 0 0 110px rgba(var(--orb-rgb), 0.30);
+      filter: blur(8px);
+      box-shadow: 0 0 90px rgba(var(--orb-rgb), 0.24);
       transform: scale(0.5);
       transition-property: transform;
       transition-timing-function: linear;
@@ -400,7 +370,10 @@
       color: var(--text-soft);
     }
 
-    .footer-row strong { color: #4f6154; font-weight: 500; }
+    .footer-row strong {
+      color: #4f6154;
+      font-weight: 500;
+    }
 
     @media (max-width: 980px) {
       .grid { grid-template-columns: 1fr; }
@@ -414,7 +387,6 @@
       .right-card { padding: 18px; }
       .phase-time { font-size: 42px; }
       .duration-grid { grid-template-columns: 1fr 1fr; }
-      .sidebar-top { margin-bottom: 16px; }
       .mobile-menu-toggle {
         display: flex;
         margin-bottom: 14px;
@@ -424,9 +396,6 @@
       }
       .sidebar-panel.open {
         display: block;
-      }
-      .sidebar-top {
-        margin-bottom: 14px;
       }
     }
   </style>
@@ -442,13 +411,6 @@
           </button>
 
           <div class="sidebar-panel" id="sidebarPanel">
-            <div class="sidebar-top">
-              <div class="sidebar-lang">
-                <button class="lang-btn active" data-lang="nl">NL</button>
-                <button class="lang-btn" data-lang="en">EN</button>
-              </div>
-            </div>
-
             <div id="phaseList" class="phase-list"></div>
 
             <div class="duration-box">
@@ -468,10 +430,7 @@
             <div class="orb-wrap">
               <div class="orb-ring"></div>
               <div class="orb-inner" id="orbInner"></div>
-
-              <div class="orb-content" id="orbContent">
-                <button class="start-btn" id="startBtn">Start</button>
-              </div>
+              <div class="orb-content" id="orbContent"></div>
             </div>
           </div>
 
@@ -490,42 +449,25 @@
 
   <script>
     const TEXT = {
-      nl: {
-        inhale: "Inademen",
-        exhale: "Uitademen",
-        hold: "Vasthouden",
-        step: "Stap",
-        duration: "Duur",
-        minutes: "min",
-        start: "Start",
-        stop: "Stop",
-        ready: "Klaar",
-        session: "sessie",
-        cycle: "Cyclus",
-        menu: "Menu"
-      },
-      en: {
-        inhale: "Inhale",
-        exhale: "Exhale",
-        hold: "Hold",
-        step: "Step",
-        duration: "Duration",
-        minutes: "min",
-        start: "Start",
-        stop: "Stop",
-        ready: "Ready",
-        session: "session",
-        cycle: "Cycle",
-        menu: "Menu"
-      }
+      inhale: "Inademen",
+      exhale: "Uitademen",
+      hold: "Vasthouden",
+      step: "Stap",
+      duration: "Duur",
+      minutes: "min",
+      start: "Start",
+      stop: "Stop",
+      ready: "Klaar",
+      session: "sessie",
+      cycle: "Cyclus",
+      menu: "Menu"
     };
 
     const SECOND_OPTIONS = [4, 5, 6, 7, 8];
     const DURATION_OPTIONS = [5, 10];
 
     const state = {
-      lang: "nl",
-      phases: createDefaultPhases("nl"),
+      phases: createDefaultPhases(),
       durationMinutes: 5,
       draggedId: null,
       dragOverId: null,
@@ -533,7 +475,6 @@
       currentPhaseIndex: 0,
       phaseRemaining: 0,
       sessionRemaining: 0,
-      innerScale: 0.5,
       timerId: null,
       phaseEndAt: 0,
       sessionEndAt: 0,
@@ -553,24 +494,23 @@
       cycleLabel: document.getElementById("cycleLabel"),
       cycleValue: document.getElementById("cycleValue"),
       footerDuration: document.getElementById("footerDuration"),
-      langButtons: Array.from(document.querySelectorAll(".lang-btn")),
       mobileMenuToggle: document.getElementById("mobileMenuToggle"),
       mobileMenuLabel: document.getElementById("mobileMenuLabel"),
       sidebarPanel: document.getElementById("sidebarPanel"),
     };
 
-    function createDefaultPhases(lang) {
-      const t = TEXT[lang];
+    function createDefaultPhases() {
       return [
-        { id: "inhale", type: "inhale", label: t.inhale, seconds: 5 },
-        { id: "exhale", type: "exhale", label: t.exhale, seconds: 5 },
-        { id: "hold", type: "hold", label: t.hold, seconds: 5 },
+        { id: "inhale", type: "inhale", label: TEXT.inhale, seconds: 5 },
+        { id: "exhale", type: "exhale", label: TEXT.exhale, seconds: 5 },
+        { id: "hold", type: "hold", label: TEXT.hold, seconds: 5 },
       ];
     }
 
     function formatTime(sec) {
-      const m = Math.floor(sec / 60);
-      const s = sec % 60;
+      const safe = Math.max(0, sec);
+      const m = Math.floor(safe / 60);
+      const s = safe % 60;
       return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
     }
 
@@ -584,10 +524,6 @@
       return next;
     }
 
-    function getText() {
-      return TEXT[state.lang];
-    }
-
     function getTotalCycleSeconds() {
       return state.phases.reduce((sum, phase) => sum + phase.seconds, 0);
     }
@@ -597,7 +533,7 @@
     }
 
     function getCurrentPhase() {
-      return state.phases[state.currentPhaseIndex];
+      return state.phases[state.currentPhaseIndex] || null;
     }
 
     function getSessionProgress() {
@@ -624,8 +560,8 @@
     }
 
     function setOrbScale(scale, seconds) {
-      state.innerScale = scale;
       els.orbInner.style.transitionDuration = `${seconds}s`;
+      els.orbInner.style.transitionTimingFunction = "linear";
       els.orbInner.style.transform = `scale(${scale})`;
     }
 
@@ -725,7 +661,10 @@
     }
 
     function startSession() {
-      if (state.timerId) clearInterval(state.timerId);
+      if (state.timerId) {
+        clearInterval(state.timerId);
+        state.timerId = null;
+      }
 
       state.isRunning = true;
       state.sessionRemaining = getSessionSeconds();
@@ -738,32 +677,34 @@
 
       state.currentPhaseIndex = 0;
       goToPhase(0);
+      state.timerId = window.setInterval(tickSession, 200);
+    }
 
-      state.timerId = setInterval(() => {
-        const now = Date.now();
-        const sessionLeft = Math.max(0, Math.ceil((state.sessionEndAt - now) / 1000));
-        const phaseLeft = Math.max(0, Math.ceil((state.phaseEndAt - now) / 1000));
+    function tickSession() {
+      if (!state.isRunning) return;
 
-        state.sessionRemaining = sessionLeft;
-        state.phaseRemaining = phaseLeft;
+      const now = Date.now();
+      const sessionLeft = Math.max(0, Math.ceil((state.sessionEndAt - now) / 1000));
+      const phaseLeft = Math.max(0, Math.ceil((state.phaseEndAt - now) / 1000));
 
-        if (sessionLeft <= 0) {
-          stopSession();
-          return;
-        }
+      state.sessionRemaining = sessionLeft;
+      state.phaseRemaining = phaseLeft;
 
-        if (phaseLeft <= 0) {
-          const nextIndex = (state.currentPhaseIndex + 1) % state.phases.length;
-          goToPhase(nextIndex);
-          return;
-        }
+      if (sessionLeft <= 0) {
+        stopSession();
+        return;
+      }
 
-        render();
-      }, 200);
+      if (phaseLeft <= 0) {
+        const nextIndex = (state.currentPhaseIndex + 1) % state.phases.length;
+        goToPhase(nextIndex);
+        return;
+      }
+
+      render();
     }
 
     function renderPhaseList() {
-      const t = getText();
       els.phaseList.innerHTML = "";
 
       state.phases.forEach((phase, index) => {
@@ -812,7 +753,7 @@
         const meta = document.createElement("div");
         meta.className = "phase-meta";
         meta.innerHTML = `
-          <div class="phase-step">${t.step} ${index + 1}</div>
+          <div class="phase-step">${TEXT.step} ${index + 1}</div>
           <div class="phase-label">${phase.label}</div>
         `;
 
@@ -841,12 +782,12 @@
     }
 
     function renderDurationButtons() {
-      const t = getText();
       els.durationGrid.innerHTML = "";
+
       DURATION_OPTIONS.forEach((option) => {
         const btn = document.createElement("button");
         btn.className = `duration-btn${state.durationMinutes === option ? " active" : ""}`;
-        btn.textContent = `${option} ${t.minutes}`;
+        btn.textContent = `${option} ${TEXT.minutes}`;
         btn.disabled = state.isRunning;
         btn.addEventListener("click", () => {
           state.durationMinutes = option;
@@ -857,14 +798,14 @@
     }
 
     function renderOrbContent() {
-      const t = getText();
       const currentPhase = getCurrentPhase();
       els.orbContent.innerHTML = "";
 
       if (!state.isRunning) {
         const btn = document.createElement("button");
         btn.className = "start-btn";
-        btn.textContent = t.start;
+        btn.type = "button";
+        btn.textContent = TEXT.start;
         btn.addEventListener("click", startSession);
         els.orbContent.appendChild(btn);
         return;
@@ -872,7 +813,7 @@
 
       const phaseName = document.createElement("div");
       phaseName.className = "phase-name";
-      phaseName.innerHTML = `<span>${currentPhase ? currentPhase.label : t.ready}</span>`;
+      phaseName.textContent = currentPhase ? currentPhase.label : TEXT.ready;
 
       const phaseTime = document.createElement("div");
       phaseTime.className = "phase-time";
@@ -880,7 +821,8 @@
 
       const stopBtn = document.createElement("button");
       stopBtn.className = "stop-btn";
-      stopBtn.textContent = t.stop;
+      stopBtn.type = "button";
+      stopBtn.textContent = TEXT.stop;
       stopBtn.addEventListener("click", stopSession);
 
       els.orbContent.appendChild(phaseName);
@@ -889,47 +831,26 @@
     }
 
     function renderStaticTexts() {
-      const t = getText();
-      els.durationLabel.textContent = t.duration;
-      els.cycleLabel.textContent = t.cycle;
-      els.mobileMenuLabel.textContent = t.menu;
-      document.documentElement.lang = state.lang;
-      document.title = t.ready;
-      els.langButtons.forEach((btn) => {
-        btn.classList.toggle("active", btn.dataset.lang === state.lang);
-      });
+      els.durationLabel.textContent = TEXT.duration;
+      els.cycleLabel.textContent = TEXT.cycle;
+      els.mobileMenuLabel.textContent = TEXT.menu;
+      document.documentElement.lang = "nl";
+      document.title = "Ademhaling";
       syncMobileMenu();
     }
 
-    function updatePhaseLabelsForLanguage() {
-      const t = getText();
-      state.phases = state.phases.map((phase) => ({
-        ...phase,
-        label: phase.type === "inhale" ? t.inhale : phase.type === "exhale" ? t.exhale : t.hold,
-      }));
-    }
-
     function render() {
-      const t = getText();
       const currentPhase = getCurrentPhase();
       renderStaticTexts();
       renderPhaseList();
       renderDurationButtons();
       renderOrbContent();
-      els.currentPhaseText.textContent = currentPhase ? currentPhase.label : t.ready;
-      els.sessionTopText.textContent = state.isRunning ? formatTime(state.sessionRemaining) : `${state.durationMinutes} ${t.minutes} ${t.session}`;
+      els.currentPhaseText.textContent = currentPhase ? currentPhase.label : TEXT.ready;
+      els.sessionTopText.textContent = state.isRunning ? formatTime(state.sessionRemaining) : `${state.durationMinutes} ${TEXT.minutes} ${TEXT.session}`;
       els.progressBar.style.width = `${Math.max(0, Math.min(100, getSessionProgress()))}%`;
       els.cycleValue.textContent = `${getTotalCycleSeconds()}s`;
-      els.footerDuration.textContent = `${state.durationMinutes} ${t.minutes}`;
+      els.footerDuration.textContent = `${state.durationMinutes} ${TEXT.minutes}`;
     }
-
-    els.langButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        state.lang = btn.dataset.lang;
-        updatePhaseLabelsForLanguage();
-        render();
-      });
-    });
 
     els.mobileMenuToggle.addEventListener("click", () => {
       state.mobileMenuOpen = !state.mobileMenuOpen;
@@ -943,7 +864,7 @@
       syncMobileMenu();
     });
 
-    updatePhaseLabelsForLanguage();
+    setOrbScale(0.5, 0);
     syncMobileMenu();
     render();
   </script>
