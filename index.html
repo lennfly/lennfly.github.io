@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ademhaling</title>
+  <style>
+    :root {
+      --bg-1: #f6f1e7;
+      --bg-2: #edf3ea;
+      --bg-3: #dde8dc;
+      --card: rgba(247, 244, 237, 0.92);
+      --border: #d7e2d4;
+      --border-soft: #dde5da;
+      --text: #314338;
+      --text-soft: #738277;
+      --text-muted: #8b998d;
+      --accent: #6f8c72;
+      --accent-dark: #617c65;
+      --accent-light: #eef3ea;
+      --button-text: #f7f5ef;
+      --ring: #d8e3d7;
+      --progress-bg: #dde7db;
+      --orb-rgb: 126, 162, 134;
+      --shadow: 0 20px 50px rgba(91, 112, 98, 0.08);
+      --shadow-strong: 0 25px 60px rgba(91, 112, 98, 0.10);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at top, var(--bg-1) 0%, var(--bg-2) 42%, var(--bg-3) 100%);
+    }
+
+    .page {
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+
+    .container {
+      max-width: 1152px;
+      margin: 0 auto;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 32px;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 34px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+
+    .left-card { padding: 24px; }
+
+    .right-card {
+      padding: 24px;
+      border-radius: 38px;
+      background: linear-gradient(180deg, rgba(250,247,240,0.96) 0%, rgba(238,244,235,0.96) 100%);
+      box-shadow: var(--shadow-strong);
+    }
+
+    .sidebar-top {
+      display: flex;
+      justify-content: flex-start;
+      margin-bottom: 20px;
+    }
+
+    .sidebar-lang {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--accent-light);
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    .mobile-menu-toggle {
+      display: none;
+      width: 100%;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: #fbfaf7;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 6px 18px rgba(91,112,98,0.05);
+    }
+
+    .mobile-menu-toggle svg {
+      transition: transform 0.2s ease;
+      color: #708274;
+      flex: 0 0 auto;
+    }
+
+    .mobile-menu-toggle.open svg {
+      transform: rotate(180deg);
+    }
+
+    .sidebar-panel {
+      display: block;
+    }
+
+    .phase-list { display: grid; gap: 16px; }
+
+    .phase-card {
+      border: 1px solid var(--border-soft);
+      border-radius: 24px;
+      padding: 16px;
+      background: #fbfaf7;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    }
+
+    .phase-card.drag-over {
+      border-color: #a8baaa;
+      background: #edf3ea;
+      box-shadow: 0 8px 20px rgba(91,112,98,0.08);
+    }
+
+    .phase-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .grip-box {
+      width: 44px;
+      height: 44px;
+      border-radius: 16px;
+      background: var(--accent-light);
+      color: #708274;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 10px rgba(91,112,98,0.06);
+      cursor: grab;
+    }
+
+    .phase-meta {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .phase-step {
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .phase-label {
+      margin-top: 4px;
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .duration-box {
+      margin-top: 32px;
+      border: 1px solid var(--border-soft);
+      border-radius: 24px;
+      background: #fbfaf7;
+      padding: 16px;
+    }
+
+    .section-label {
+      margin-bottom: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #5f7062;
+    }
+
+    .duration-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .chip,
+    .lang-btn,
+    .stop-btn,
+    .duration-btn,
+    .start-btn {
+      appearance: none;
+      border: 0;
+      outline: none;
+      cursor: pointer;
+      font: inherit;
+      transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+
+    .lang-btn {
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-size: 14px;
+      color: #5f7062;
+      background: transparent;
+    }
+
+    .lang-btn.active {
+      background: var(--accent);
+      color: var(--button-text);
+      box-shadow: 0 4px 14px rgba(111,140,114,0.18);
+    }
+
+    .chip {
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 14px;
+      border: 1px solid var(--border-soft);
+      background: #f3f2ec;
+      color: #5c6d5f;
+    }
+
+    .chip.active {
+      background: var(--accent);
+      color: var(--button-text);
+      box-shadow: 0 4px 14px rgba(111,140,114,0.18);
+      border-color: transparent;
+    }
+
+    .duration-btn {
+      border-radius: 18px;
+      padding: 14px 16px;
+      background: var(--accent-light);
+      color: #55665a;
+      font-size: 14px;
+    }
+
+    .duration-btn.active {
+      background: var(--accent);
+      color: var(--button-text);
+      box-shadow: 0 4px 14px rgba(111,140,114,0.18);
+    }
+
+    .status-row {
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      font-size: 14px;
+      color: var(--text-soft);
+    }
+
+    .status-row .current {
+      font-weight: 500;
+      color: #4f6154;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      background: var(--accent-light);
+      padding: 8px 12px;
+      font-weight: 500;
+      color: #5f7062;
+    }
+
+    .orb-stage {
+      min-height: 560px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .orb-wrap {
+      position: relative;
+      width: 430px;
+      height: 430px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .orb-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 10px solid var(--ring);
+      background: radial-gradient(circle at center, rgba(255,255,255,0.85) 0%, rgba(241,246,237,0.35) 70%, transparent 100%);
+      box-shadow: 0 0 40px rgba(150,170,152,0.16);
+    }
+
+    .orb-inner {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: radial-gradient(circle at center,
+        rgba(var(--orb-rgb), 0.82) 0%,
+        rgba(var(--orb-rgb), 0.68) 34%,
+        rgba(var(--orb-rgb), 0.42) 60%,
+        rgba(var(--orb-rgb), 0.18) 80%,
+        rgba(var(--orb-rgb), 0.06) 92%,
+        transparent 100%);
+      filter: blur(14px);
+      box-shadow: 0 0 110px rgba(var(--orb-rgb), 0.30);
+      transform: scale(0.5);
+      transition-property: transform;
+      transition-timing-function: linear;
+      pointer-events: none;
+    }
+
+    .orb-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .start-btn {
+      width: 96px;
+      height: 96px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: var(--button-text);
+      box-shadow: 0 12px 30px rgba(111,140,114,0.28);
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .start-btn:hover { background: var(--accent-dark); }
+
+    .phase-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.28em;
+      color: rgba(247,245,239,0.88);
+    }
+
+    .phase-time {
+      margin-top: 16px;
+      font-size: 52px;
+      font-weight: 600;
+      color: var(--button-text);
+    }
+
+    .stop-btn {
+      margin-top: 24px;
+      padding: 10px 20px;
+      border-radius: 999px;
+      border: 1px solid rgba(247,245,239,0.45);
+      background: rgba(247,245,239,0.10);
+      color: var(--button-text);
+      backdrop-filter: blur(6px);
+    }
+
+    .stop-btn:hover { background: rgba(247,245,239,0.16); }
+
+    .progress {
+      margin-top: 24px;
+      height: 10px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: var(--progress-bg);
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #7ea286 0%, #67856f 100%);
+      transition: width 0.22s linear;
+    }
+
+    .footer-row {
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      font-size: 14px;
+      color: var(--text-soft);
+    }
+
+    .footer-row strong { color: #4f6154; font-weight: 500; }
+
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+      .orb-wrap { width: min(78vw, 430px); height: min(78vw, 430px); }
+      .orb-stage { min-height: 440px; }
+    }
+
+    @media (max-width: 640px) {
+      .page { padding: 20px 14px; }
+      .left-card,
+      .right-card { padding: 18px; }
+      .phase-time { font-size: 42px; }
+      .duration-grid { grid-template-columns: 1fr 1fr; }
+      .sidebar-top { margin-bottom: 16px; }
+      .mobile-menu-toggle {
+        display: flex;
+        margin-bottom: 14px;
+      }
+      .sidebar-panel {
+        display: none;
+      }
+      .sidebar-panel.open {
+        display: block;
+      }
+      .sidebar-top {
+        margin-bottom: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="container">
+      <div class="grid">
+        <div class="card left-card">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" type="button" aria-expanded="false">
+            <span id="mobileMenuLabel">Menu</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+
+          <div class="sidebar-panel" id="sidebarPanel">
+            <div class="sidebar-top">
+              <div class="sidebar-lang">
+                <button class="lang-btn active" data-lang="nl">NL</button>
+                <button class="lang-btn" data-lang="en">EN</button>
+              </div>
+            </div>
+
+            <div id="phaseList" class="phase-list"></div>
+
+            <div class="duration-box">
+              <div id="durationLabel" class="section-label">Duur</div>
+              <div class="duration-grid" id="durationGrid"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card right-card">
+          <div class="status-row">
+            <span class="current" id="currentPhaseText">Klaar</span>
+            <span class="status-pill" id="sessionTopText">5 min sessie</span>
+          </div>
+
+          <div class="orb-stage">
+            <div class="orb-wrap">
+              <div class="orb-ring"></div>
+              <div class="orb-inner" id="orbInner"></div>
+
+              <div class="orb-content" id="orbContent">
+                <button class="start-btn" id="startBtn">Start</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+
+          <div class="footer-row">
+            <span><span id="cycleLabel">Cyclus</span>: <strong id="cycleValue">15s</strong></span>
+            <span id="footerDuration">5 min</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const TEXT = {
+      nl: {
+        inhale: "Inademen",
+        exhale: "Uitademen",
+        hold: "Vasthouden",
+        step: "Stap",
+        duration: "Duur",
+        minutes: "min",
+        start: "Start",
+        stop: "Stop",
+        ready: "Klaar",
+        session: "sessie",
+        cycle: "Cyclus",
+        menu: "Menu"
+      },
+      en: {
+        inhale: "Inhale",
+        exhale: "Exhale",
+        hold: "Hold",
+        step: "Step",
+        duration: "Duration",
+        minutes: "min",
+        start: "Start",
+        stop: "Stop",
+        ready: "Ready",
+        session: "session",
+        cycle: "Cycle",
+        menu: "Menu"
+      }
+    };
+
+    const SECOND_OPTIONS = [4, 5, 6, 7, 8];
+    const DURATION_OPTIONS = [5, 10];
+
+    const state = {
+      lang: "nl",
+      phases: createDefaultPhases("nl"),
+      durationMinutes: 5,
+      draggedId: null,
+      dragOverId: null,
+      isRunning: false,
+      currentPhaseIndex: 0,
+      phaseRemaining: 0,
+      sessionRemaining: 0,
+      innerScale: 0.5,
+      timerId: null,
+      phaseEndAt: 0,
+      sessionEndAt: 0,
+      audioContext: null,
+      mobileMenuOpen: false,
+    };
+
+    const els = {
+      phaseList: document.getElementById("phaseList"),
+      durationLabel: document.getElementById("durationLabel"),
+      durationGrid: document.getElementById("durationGrid"),
+      currentPhaseText: document.getElementById("currentPhaseText"),
+      sessionTopText: document.getElementById("sessionTopText"),
+      orbInner: document.getElementById("orbInner"),
+      orbContent: document.getElementById("orbContent"),
+      progressBar: document.getElementById("progressBar"),
+      cycleLabel: document.getElementById("cycleLabel"),
+      cycleValue: document.getElementById("cycleValue"),
+      footerDuration: document.getElementById("footerDuration"),
+      langButtons: Array.from(document.querySelectorAll(".lang-btn")),
+      mobileMenuToggle: document.getElementById("mobileMenuToggle"),
+      mobileMenuLabel: document.getElementById("mobileMenuLabel"),
+      sidebarPanel: document.getElementById("sidebarPanel"),
+    };
+
+    function createDefaultPhases(lang) {
+      const t = TEXT[lang];
+      return [
+        { id: "inhale", type: "inhale", label: t.inhale, seconds: 5 },
+        { id: "exhale", type: "exhale", label: t.exhale, seconds: 5 },
+        { id: "hold", type: "hold", label: t.hold, seconds: 5 },
+      ];
+    }
+
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    }
+
+    function reorder(list, startId, targetId) {
+      const next = [...list];
+      const fromIndex = next.findIndex((item) => item.id === startId);
+      const toIndex = next.findIndex((item) => item.id === targetId);
+      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return next;
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    }
+
+    function getText() {
+      return TEXT[state.lang];
+    }
+
+    function getTotalCycleSeconds() {
+      return state.phases.reduce((sum, phase) => sum + phase.seconds, 0);
+    }
+
+    function getSessionSeconds() {
+      return state.durationMinutes * 60;
+    }
+
+    function getCurrentPhase() {
+      return state.phases[state.currentPhaseIndex];
+    }
+
+    function getSessionProgress() {
+      const sessionSeconds = getSessionSeconds();
+      if (sessionSeconds <= 0) return 0;
+      return ((sessionSeconds - state.sessionRemaining) / sessionSeconds) * 100;
+    }
+
+    function isMobileView() {
+      return window.innerWidth <= 640;
+    }
+
+    function syncMobileMenu() {
+      if (!isMobileView()) {
+        els.sidebarPanel.classList.remove("open");
+        els.mobileMenuToggle.classList.remove("open");
+        els.mobileMenuToggle.setAttribute("aria-expanded", "false");
+        return;
+      }
+
+      els.sidebarPanel.classList.toggle("open", state.mobileMenuOpen);
+      els.mobileMenuToggle.classList.toggle("open", state.mobileMenuOpen);
+      els.mobileMenuToggle.setAttribute("aria-expanded", String(state.mobileMenuOpen));
+    }
+
+    function setOrbScale(scale, seconds) {
+      state.innerScale = scale;
+      els.orbInner.style.transitionDuration = `${seconds}s`;
+      els.orbInner.style.transform = `scale(${scale})`;
+    }
+
+    function setVisualForPhase(phase) {
+      if (!phase) return;
+      if (phase.type === "inhale") setOrbScale(1, phase.seconds);
+      if (phase.type === "exhale") setOrbScale(0.5, phase.seconds);
+    }
+
+    function ensureAudioContext() {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return null;
+      if (!state.audioContext) state.audioContext = new AudioContextClass();
+      if (state.audioContext.state === "suspended") state.audioContext.resume();
+      return state.audioContext;
+    }
+
+    function playTone(type) {
+      const ctx = ensureAudioContext();
+      if (!ctx) return;
+
+      const now = ctx.currentTime;
+      const master = ctx.createGain();
+      const oscA = ctx.createOscillator();
+      const oscB = ctx.createOscillator();
+      const filter = ctx.createBiquadFilter();
+
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(700, now);
+      filter.Q.setValueAtTime(0.15, now);
+
+      master.gain.setValueAtTime(0.0001, now);
+      master.gain.exponentialRampToValueAtTime(0.015, now + 0.45);
+      master.gain.exponentialRampToValueAtTime(0.01, now + 1.4);
+      master.gain.exponentialRampToValueAtTime(0.0001, now + 2.8);
+
+      if (type === "inhale") {
+        oscA.type = "sine";
+        oscB.type = "triangle";
+        oscA.frequency.setValueAtTime(220, now);
+        oscA.frequency.exponentialRampToValueAtTime(270, now + 1.8);
+        oscB.frequency.setValueAtTime(110, now);
+        oscB.frequency.exponentialRampToValueAtTime(135, now + 1.8);
+      } else if (type === "exhale") {
+        oscA.type = "sine";
+        oscB.type = "triangle";
+        oscA.frequency.setValueAtTime(240, now);
+        oscA.frequency.exponentialRampToValueAtTime(170, now + 1.9);
+        oscB.frequency.setValueAtTime(120, now);
+        oscB.frequency.exponentialRampToValueAtTime(85, now + 1.9);
+      } else {
+        oscA.type = "sine";
+        oscB.type = "sine";
+        oscA.frequency.setValueAtTime(185, now);
+        oscA.frequency.linearRampToValueAtTime(195, now + 1.4);
+        oscB.frequency.setValueAtTime(92, now);
+        oscB.frequency.linearRampToValueAtTime(97, now + 1.4);
+      }
+
+      oscA.connect(filter);
+      oscB.connect(filter);
+      filter.connect(master);
+      master.connect(ctx.destination);
+      oscA.start(now);
+      oscB.start(now);
+      oscA.stop(now + 2.9);
+      oscB.stop(now + 2.9);
+    }
+
+    function stopSession() {
+      if (state.timerId) {
+        clearInterval(state.timerId);
+        state.timerId = null;
+      }
+      state.isRunning = false;
+      state.currentPhaseIndex = 0;
+      state.phaseRemaining = 0;
+      state.sessionRemaining = 0;
+      setOrbScale(0.5, 0);
+      render();
+    }
+
+    function goToPhase(index) {
+      const phase = state.phases[index];
+      if (!phase) return;
+
+      state.currentPhaseIndex = index;
+      state.phaseRemaining = phase.seconds;
+      state.phaseEndAt = Date.now() + phase.seconds * 1000;
+
+      if (phase.type !== "hold") {
+        requestAnimationFrame(() => setVisualForPhase(phase));
+      }
+
+      playTone(phase.type);
+      render();
+    }
+
+    function startSession() {
+      if (state.timerId) clearInterval(state.timerId);
+
+      state.isRunning = true;
+      state.sessionRemaining = getSessionSeconds();
+      state.sessionEndAt = Date.now() + getSessionSeconds() * 1000;
+
+      const first = state.phases[0];
+      if (first?.type === "inhale") setOrbScale(0.5, 0);
+      if (first?.type === "exhale") setOrbScale(1, 0);
+      if (first?.type === "hold") setOrbScale(0.5, 0);
+
+      state.currentPhaseIndex = 0;
+      goToPhase(0);
+
+      state.timerId = setInterval(() => {
+        const now = Date.now();
+        const sessionLeft = Math.max(0, Math.ceil((state.sessionEndAt - now) / 1000));
+        const phaseLeft = Math.max(0, Math.ceil((state.phaseEndAt - now) / 1000));
+
+        state.sessionRemaining = sessionLeft;
+        state.phaseRemaining = phaseLeft;
+
+        if (sessionLeft <= 0) {
+          stopSession();
+          return;
+        }
+
+        if (phaseLeft <= 0) {
+          const nextIndex = (state.currentPhaseIndex + 1) % state.phases.length;
+          goToPhase(nextIndex);
+          return;
+        }
+
+        render();
+      }, 200);
+    }
+
+    function renderPhaseList() {
+      const t = getText();
+      els.phaseList.innerHTML = "";
+
+      state.phases.forEach((phase, index) => {
+        const phaseCard = document.createElement("div");
+        phaseCard.className = `phase-card${state.dragOverId === phase.id ? " drag-over" : ""}`;
+        phaseCard.draggable = !state.isRunning;
+
+        phaseCard.addEventListener("dragstart", () => {
+          if (state.isRunning) return;
+          state.draggedId = phase.id;
+        });
+
+        phaseCard.addEventListener("dragover", (e) => {
+          if (state.isRunning) return;
+          e.preventDefault();
+          state.dragOverId = phase.id;
+          phaseCard.classList.add("drag-over");
+        });
+
+        phaseCard.addEventListener("dragleave", () => {
+          phaseCard.classList.remove("drag-over");
+        });
+
+        phaseCard.addEventListener("drop", (e) => {
+          e.preventDefault();
+          if (!state.draggedId || state.draggedId === phase.id || state.isRunning) return;
+          state.phases = reorder(state.phases, state.draggedId, phase.id);
+          state.draggedId = null;
+          state.dragOverId = null;
+          render();
+        });
+
+        phaseCard.addEventListener("dragend", () => {
+          state.draggedId = null;
+          state.dragOverId = null;
+          render();
+        });
+
+        const head = document.createElement("div");
+        head.className = "phase-head";
+
+        const grip = document.createElement("div");
+        grip.className = "grip-box";
+        grip.innerHTML = '<span aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="5" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="9" cy="19" r="1.2"/><circle cx="15" cy="5" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="15" cy="19" r="1.2"/></svg></span>';
+
+        const meta = document.createElement("div");
+        meta.className = "phase-meta";
+        meta.innerHTML = `
+          <div class="phase-step">${t.step} ${index + 1}</div>
+          <div class="phase-label">${phase.label}</div>
+        `;
+
+        head.appendChild(grip);
+        head.appendChild(meta);
+        phaseCard.appendChild(head);
+
+        const chips = document.createElement("div");
+        chips.className = "chips";
+
+        SECOND_OPTIONS.forEach((sec) => {
+          const chip = document.createElement("button");
+          chip.className = `chip${phase.seconds === sec ? " active" : ""}`;
+          chip.textContent = `${sec}s`;
+          chip.disabled = state.isRunning;
+          chip.addEventListener("click", () => {
+            phase.seconds = sec;
+            render();
+          });
+          chips.appendChild(chip);
+        });
+
+        phaseCard.appendChild(chips);
+        els.phaseList.appendChild(phaseCard);
+      });
+    }
+
+    function renderDurationButtons() {
+      const t = getText();
+      els.durationGrid.innerHTML = "";
+      DURATION_OPTIONS.forEach((option) => {
+        const btn = document.createElement("button");
+        btn.className = `duration-btn${state.durationMinutes === option ? " active" : ""}`;
+        btn.textContent = `${option} ${t.minutes}`;
+        btn.disabled = state.isRunning;
+        btn.addEventListener("click", () => {
+          state.durationMinutes = option;
+          render();
+        });
+        els.durationGrid.appendChild(btn);
+      });
+    }
+
+    function renderOrbContent() {
+      const t = getText();
+      const currentPhase = getCurrentPhase();
+      els.orbContent.innerHTML = "";
+
+      if (!state.isRunning) {
+        const btn = document.createElement("button");
+        btn.className = "start-btn";
+        btn.textContent = t.start;
+        btn.addEventListener("click", startSession);
+        els.orbContent.appendChild(btn);
+        return;
+      }
+
+      const phaseName = document.createElement("div");
+      phaseName.className = "phase-name";
+      phaseName.innerHTML = `<span>${currentPhase ? currentPhase.label : t.ready}</span>`;
+
+      const phaseTime = document.createElement("div");
+      phaseTime.className = "phase-time";
+      phaseTime.textContent = `${state.phaseRemaining}s`;
+
+      const stopBtn = document.createElement("button");
+      stopBtn.className = "stop-btn";
+      stopBtn.textContent = t.stop;
+      stopBtn.addEventListener("click", stopSession);
+
+      els.orbContent.appendChild(phaseName);
+      els.orbContent.appendChild(phaseTime);
+      els.orbContent.appendChild(stopBtn);
+    }
+
+    function renderStaticTexts() {
+      const t = getText();
+      els.durationLabel.textContent = t.duration;
+      els.cycleLabel.textContent = t.cycle;
+      els.mobileMenuLabel.textContent = t.menu;
+      document.documentElement.lang = state.lang;
+      document.title = t.ready;
+      els.langButtons.forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.lang === state.lang);
+      });
+      syncMobileMenu();
+    }
+
+    function updatePhaseLabelsForLanguage() {
+      const t = getText();
+      state.phases = state.phases.map((phase) => ({
+        ...phase,
+        label: phase.type === "inhale" ? t.inhale : phase.type === "exhale" ? t.exhale : t.hold,
+      }));
+    }
+
+    function render() {
+      const t = getText();
+      const currentPhase = getCurrentPhase();
+      renderStaticTexts();
+      renderPhaseList();
+      renderDurationButtons();
+      renderOrbContent();
+      els.currentPhaseText.textContent = currentPhase ? currentPhase.label : t.ready;
+      els.sessionTopText.textContent = state.isRunning ? formatTime(state.sessionRemaining) : `${state.durationMinutes} ${t.minutes} ${t.session}`;
+      els.progressBar.style.width = `${Math.max(0, Math.min(100, getSessionProgress()))}%`;
+      els.cycleValue.textContent = `${getTotalCycleSeconds()}s`;
+      els.footerDuration.textContent = `${state.durationMinutes} ${t.minutes}`;
+    }
+
+    els.langButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.lang = btn.dataset.lang;
+        updatePhaseLabelsForLanguage();
+        render();
+      });
+    });
+
+    els.mobileMenuToggle.addEventListener("click", () => {
+      state.mobileMenuOpen = !state.mobileMenuOpen;
+      syncMobileMenu();
+    });
+
+    window.addEventListener("resize", () => {
+      if (!isMobileView()) {
+        state.mobileMenuOpen = false;
+      }
+      syncMobileMenu();
+    });
+
+    updatePhaseLabelsForLanguage();
+    syncMobileMenu();
+    render();
+  </script>
+</body>
+</html>
