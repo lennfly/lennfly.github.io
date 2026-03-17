@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Ademhaling</title>
   <style>
     :root {
@@ -27,17 +27,26 @@
     }
 
     * { box-sizing: border-box; }
-    html, body { height: 100%; }
+
+    html {
+      min-height: 100%;
+      background: radial-gradient(circle at top, var(--bg-1) 0%, var(--bg-2) 42%, var(--bg-3) 100%);
+      overscroll-behavior-y: none;
+    }
+
     body {
+      min-height: 100svh;
       margin: 0;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: var(--text);
       background: radial-gradient(circle at top, var(--bg-1) 0%, var(--bg-2) 42%, var(--bg-3) 100%);
+      overscroll-behavior-y: none;
+      -webkit-overflow-scrolling: touch;
     }
 
     .page {
-      min-height: 100vh;
-      padding: 40px 24px;
+      min-height: 100svh;
+      padding: calc(40px + env(safe-area-inset-top)) 24px calc(40px + env(safe-area-inset-bottom)) 24px;
     }
 
     .container {
@@ -109,9 +118,14 @@
       padding: 16px;
       background: #fbfaf7;
       transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
     }
 
-    .phase-card.drag-over {
+    .phase-card.drag-over,
+    .phase-card.touch-dragging {
       border-color: #a8baaa;
       background: #edf3ea;
       box-shadow: 0 8px 20px rgba(91,112,98,0.08);
@@ -135,6 +149,7 @@
       box-shadow: 0 2px 10px rgba(91,112,98,0.06);
       cursor: grab;
       flex: 0 0 auto;
+      touch-action: none;
     }
 
     .phase-meta {
@@ -299,6 +314,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
       text-align: center;
     }
 
@@ -315,31 +331,15 @@
 
     .start-btn:hover { background: var(--accent-dark); }
 
-    .phase-name {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 0.28em;
-      color: rgba(247,245,239,0.88);
-    }
-
-    .phase-time {
-      margin-top: 16px;
-      font-size: 52px;
-      font-weight: 600;
-      color: var(--button-text);
-    }
-
     .stop-btn {
-      margin-top: 24px;
-      padding: 10px 20px;
+      padding: 12px 22px;
       border-radius: 999px;
       border: 1px solid rgba(247,245,239,0.45);
       background: rgba(247,245,239,0.10);
       color: var(--button-text);
       backdrop-filter: blur(6px);
+      font-size: 15px;
+      font-weight: 500;
     }
 
     .stop-btn:hover { background: rgba(247,245,239,0.16); }
@@ -382,18 +382,31 @@
     }
 
     @media (max-width: 640px) {
-      .page { padding: 20px 14px; }
+      html,
+      body,
+      .page {
+        width: 100%;
+        overflow-x: hidden;
+      }
+
+      .page {
+        padding: calc(20px + env(safe-area-inset-top)) 14px calc(20px + env(safe-area-inset-bottom) + 16px) 14px;
+      }
+
       .left-card,
       .right-card { padding: 18px; }
-      .phase-time { font-size: 42px; }
+
       .duration-grid { grid-template-columns: 1fr 1fr; }
+
       .mobile-menu-toggle {
         display: flex;
         margin-bottom: 14px;
       }
+
       .sidebar-panel {
         display: none;
       }
+
       .sidebar-panel.open {
         display: block;
       }
@@ -471,6 +484,8 @@
       durationMinutes: 5,
       draggedId: null,
       dragOverId: null,
+      touchDragId: null,
+      touchDropId: null,
       isRunning: false,
       currentPhaseIndex: 0,
       phaseRemaining: 0,
@@ -704,13 +719,58 @@
       render();
     }
 
+    function getTouchPhaseCard(clientX, clientY) {
+      const phaseCards = Array.from(els.phaseList.querySelectorAll(".phase-card"));
+      return phaseCards.find((card) => {
+        const rect = card.getBoundingClientRect();
+        return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+      }) || null;
+    }
+
+    function handleTouchDragStart(phaseId, event) {
+      if (state.isRunning) return;
+      state.touchDragId = phaseId;
+      state.touchDropId = phaseId;
+      const phaseCard = event.currentTarget.closest(".phase-card");
+      if (phaseCard) phaseCard.classList.add("touch-dragging");
+    }
+
+    function handleTouchDragMove(event) {
+      if (!state.touchDragId || state.isRunning) return;
+      const touch = event.touches[0];
+      if (!touch) return;
+      const targetCard = getTouchPhaseCard(touch.clientX, touch.clientY);
+      state.touchDropId = targetCard ? targetCard.dataset.phaseId : null;
+      render();
+    }
+
+    function handleTouchDragEnd() {
+      if (!state.touchDragId || state.isRunning) {
+        state.touchDragId = null;
+        state.touchDropId = null;
+        return;
+      }
+
+      if (state.touchDropId && state.touchDropId !== state.touchDragId) {
+        state.phases = reorder(state.phases, state.touchDragId, state.touchDropId);
+      }
+
+      state.touchDragId = null;
+      state.touchDropId = null;
+      render();
+    }
+
     function renderPhaseList() {
       els.phaseList.innerHTML = "";
 
       state.phases.forEach((phase, index) => {
         const phaseCard = document.createElement("div");
-        phaseCard.className = `phase-card${state.dragOverId === phase.id ? " drag-over" : ""}`;
-        phaseCard.draggable = !state.isRunning;
+        const isDropTarget = state.dragOverId === phase.id || state.touchDropId === phase.id;
+        const isTouchDragging = state.touchDragId === phase.id;
+
+        phaseCard.className = `phase-card${isDropTarget ? " drag-over" : ""}${isTouchDragging ? " touch-dragging" : ""}`;
+        phaseCard.draggable = !state.isRunning && !isMobileView();
+        phaseCard.dataset.phaseId = phase.id;
 
         phaseCard.addEventListener("dragstart", () => {
           if (state.isRunning) return;
@@ -749,6 +809,10 @@
         const grip = document.createElement("div");
         grip.className = "grip-box";
         grip.innerHTML = '<span aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="5" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="9" cy="19" r="1.2"/><circle cx="15" cy="5" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="15" cy="19" r="1.2"/></svg></span>';
+        grip.addEventListener("touchstart", (event) => handleTouchDragStart(phase.id, event), { passive: true });
+        grip.addEventListener("touchmove", handleTouchDragMove, { passive: true });
+        grip.addEventListener("touchend", handleTouchDragEnd);
+        grip.addEventListener("touchcancel", handleTouchDragEnd);
 
         const meta = document.createElement("div");
         meta.className = "phase-meta";
@@ -798,7 +862,6 @@
     }
 
     function renderOrbContent() {
-      const currentPhase = getCurrentPhase();
       els.orbContent.innerHTML = "";
 
       if (!state.isRunning) {
@@ -811,22 +874,11 @@
         return;
       }
 
-      const phaseName = document.createElement("div");
-      phaseName.className = "phase-name";
-      phaseName.textContent = currentPhase ? currentPhase.label : TEXT.ready;
-
-      const phaseTime = document.createElement("div");
-      phaseTime.className = "phase-time";
-      phaseTime.textContent = `${state.phaseRemaining}s`;
-
       const stopBtn = document.createElement("button");
       stopBtn.className = "stop-btn";
       stopBtn.type = "button";
       stopBtn.textContent = TEXT.stop;
       stopBtn.addEventListener("click", stopSession);
-
-      els.orbContent.appendChild(phaseName);
-      els.orbContent.appendChild(phaseTime);
       els.orbContent.appendChild(stopBtn);
     }
 
