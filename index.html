@@ -31,7 +31,6 @@
     html {
       min-height: 100%;
       background: radial-gradient(circle at top, var(--bg-1) 0%, var(--bg-2) 42%, var(--bg-3) 100%);
-      overscroll-behavior-y: none;
     }
 
     body {
@@ -40,7 +39,6 @@
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: var(--text);
       background: radial-gradient(circle at top, var(--bg-1) 0%, var(--bg-2) 42%, var(--bg-3) 100%);
-      overscroll-behavior-y: none;
       -webkit-overflow-scrolling: touch;
     }
 
@@ -77,20 +75,23 @@
       box-shadow: var(--shadow-strong);
     }
 
-    .mobile-menu-toggle {
+    .mobile-settings-wrap {
       display: none;
-      width: 100%;
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    .mobile-menu-toggle {
+      display: inline-flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 14px 16px;
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      background: #fbfaf7;
-      color: var(--text);
+      gap: 8px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: #5f7062;
       font-size: 14px;
       font-weight: 500;
-      box-shadow: 0 6px 18px rgba(91,112,98,0.05);
+      cursor: pointer;
     }
 
     .mobile-menu-toggle svg {
@@ -113,22 +114,26 @@
     }
 
     .phase-card {
+      position: relative;
       border: 1px solid var(--border-soft);
       border-radius: 24px;
       padding: 16px;
       background: #fbfaf7;
-      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
-      touch-action: none;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease, opacity 0.18s ease;
       user-select: none;
       -webkit-user-select: none;
       -webkit-touch-callout: none;
     }
 
     .phase-card.drag-over,
-    .phase-card.touch-dragging {
+    .phase-card.touch-drop-target {
       border-color: #a8baaa;
       background: #edf3ea;
       box-shadow: 0 8px 20px rgba(91,112,98,0.08);
+    }
+
+    .phase-card.touch-source-hidden {
+      opacity: 0.35;
     }
 
     .phase-head {
@@ -150,6 +155,10 @@
       cursor: grab;
       flex: 0 0 auto;
       touch-action: none;
+    }
+
+    .grip-box:active {
+      cursor: grabbing;
     }
 
     .phase-meta {
@@ -316,6 +325,8 @@
       align-items: center;
       justify-content: center;
       text-align: center;
+      gap: 12px;
+      padding: 20px;
     }
 
     .start-btn {
@@ -330,6 +341,16 @@
     }
 
     .start-btn:hover { background: var(--accent-dark); }
+
+    .phase-name {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: rgba(247,245,239,0.88);
+      font-weight: 500;
+      max-width: 180px;
+      line-height: 1.4;
+    }
 
     .stop-btn {
       padding: 12px 22px;
@@ -375,6 +396,32 @@
       font-weight: 500;
     }
 
+    .touch-ghost {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 0;
+      height: 0;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0;
+    }
+
+    .touch-ghost.active {
+      opacity: 1;
+    }
+
+    .touch-ghost-card {
+      width: min(320px, calc(100vw - 32px));
+      border: 1px solid #a8baaa;
+      border-radius: 24px;
+      padding: 16px;
+      background: rgba(251, 250, 247, 0.96);
+      box-shadow: 0 18px 38px rgba(91,112,98,0.18);
+      backdrop-filter: blur(8px);
+      transform: translate(-50%, -50%) scale(1.02);
+    }
+
     @media (max-width: 980px) {
       .grid { grid-template-columns: 1fr; }
       .orb-wrap { width: min(78vw, 430px); height: min(78vw, 430px); }
@@ -398,13 +445,13 @@
 
       .duration-grid { grid-template-columns: 1fr 1fr; }
 
-      .mobile-menu-toggle {
-        display: flex;
-        margin-bottom: 14px;
+      .mobile-settings-wrap {
+        display: block;
       }
 
       .sidebar-panel {
         display: none;
+        margin-top: 10px;
       }
 
       .sidebar-panel.open {
@@ -418,10 +465,12 @@
     <div class="container">
       <div class="grid">
         <div class="card left-card">
-          <button class="mobile-menu-toggle" id="mobileMenuToggle" type="button" aria-expanded="false">
-            <span id="mobileMenuLabel">Menu</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-          </button>
+          <div class="mobile-settings-wrap">
+            <button class="mobile-menu-toggle" id="mobileMenuToggle" type="button" aria-expanded="false">
+              <span id="mobileMenuLabel">Instellingen</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+          </div>
 
           <div class="sidebar-panel" id="sidebarPanel">
             <div id="phaseList" class="phase-list"></div>
@@ -460,6 +509,8 @@
     </div>
   </div>
 
+  <div class="touch-ghost" id="touchGhost"></div>
+
   <script>
     const TEXT = {
       inhale: "Inademen",
@@ -473,19 +524,18 @@
       ready: "Klaar",
       session: "sessie",
       cycle: "Cyclus",
-      menu: "Menu"
+      menu: "Instellingen"
     };
 
     const SECOND_OPTIONS = [4, 5, 6, 7, 8];
     const DURATION_OPTIONS = [5, 10];
+    const TOUCH_HOLD_MS = 180;
 
     const state = {
       phases: createDefaultPhases(),
       durationMinutes: 5,
       draggedId: null,
       dragOverId: null,
-      touchDragId: null,
-      touchDropId: null,
       isRunning: false,
       currentPhaseIndex: 0,
       phaseRemaining: 0,
@@ -495,6 +545,18 @@
       sessionEndAt: 0,
       audioContext: null,
       mobileMenuOpen: false,
+
+      touch: {
+        sourceId: null,
+        dropId: null,
+        holdTimer: null,
+        active: false,
+        started: false,
+        startX: 0,
+        startY: 0,
+        x: 0,
+        y: 0,
+      }
     };
 
     const els = {
@@ -512,6 +574,7 @@
       mobileMenuToggle: document.getElementById("mobileMenuToggle"),
       mobileMenuLabel: document.getElementById("mobileMenuLabel"),
       sidebarPanel: document.getElementById("sidebarPanel"),
+      touchGhost: document.getElementById("touchGhost"),
     };
 
     function createDefaultPhases() {
@@ -719,44 +782,149 @@
       render();
     }
 
+    function clearTouchHoldTimer() {
+      if (state.touch.holdTimer) {
+        clearTimeout(state.touch.holdTimer);
+        state.touch.holdTimer = null;
+      }
+    }
+
+    function resetTouchState() {
+      clearTouchHoldTimer();
+      state.touch.sourceId = null;
+      state.touch.dropId = null;
+      state.touch.active = false;
+      state.touch.started = false;
+      state.touch.startX = 0;
+      state.touch.startY = 0;
+      state.touch.x = 0;
+      state.touch.y = 0;
+      hideTouchGhost();
+    }
+
+    function createGhostMarkup(phase, index) {
+      return `
+        <div class="touch-ghost-card">
+          <div class="phase-head">
+            <div class="grip-box">
+              <span aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                  <circle cx="9" cy="5" r="1.2"/>
+                  <circle cx="9" cy="12" r="1.2"/>
+                  <circle cx="9" cy="19" r="1.2"/>
+                  <circle cx="15" cy="5" r="1.2"/>
+                  <circle cx="15" cy="12" r="1.2"/>
+                  <circle cx="15" cy="19" r="1.2"/>
+                </svg>
+              </span>
+            </div>
+            <div class="phase-meta">
+              <div class="phase-step">${TEXT.step} ${index + 1}</div>
+              <div class="phase-label">${phase.label}</div>
+            </div>
+          </div>
+          <div class="chips">
+            ${SECOND_OPTIONS.map((sec) => `<span class="chip${phase.seconds === sec ? " active" : ""}">${sec}s</span>`).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function showTouchGhost(phaseId) {
+      const phase = state.phases.find((p) => p.id === phaseId);
+      const index = state.phases.findIndex((p) => p.id === phaseId);
+      if (!phase || index === -1) return;
+      els.touchGhost.innerHTML = createGhostMarkup(phase, index);
+      els.touchGhost.classList.add("active");
+      updateTouchGhostPosition(state.touch.x, state.touch.y);
+    }
+
+    function updateTouchGhostPosition(x, y) {
+      els.touchGhost.style.left = `${x}px`;
+      els.touchGhost.style.top = `${y}px`;
+    }
+
+    function hideTouchGhost() {
+      els.touchGhost.classList.remove("active");
+      els.touchGhost.innerHTML = "";
+      els.touchGhost.style.left = "0px";
+      els.touchGhost.style.top = "0px";
+    }
+
     function getTouchPhaseCard(clientX, clientY) {
-      const phaseCards = Array.from(els.phaseList.querySelectorAll(".phase-card"));
-      return phaseCards.find((card) => {
-        const rect = card.getBoundingClientRect();
-        return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
-      }) || null;
+      const el = document.elementFromPoint(clientX, clientY);
+      if (!el) return null;
+      return el.closest(".phase-card");
     }
 
-    function handleTouchDragStart(phaseId, event) {
-      if (state.isRunning) return;
-      state.touchDragId = phaseId;
-      state.touchDropId = phaseId;
-      const phaseCard = event.currentTarget.closest(".phase-card");
-      if (phaseCard) phaseCard.classList.add("touch-dragging");
-    }
-
-    function handleTouchDragMove(event) {
-      if (!state.touchDragId || state.isRunning) return;
-      const touch = event.touches[0];
-      if (!touch) return;
-      const targetCard = getTouchPhaseCard(touch.clientX, touch.clientY);
-      state.touchDropId = targetCard ? targetCard.dataset.phaseId : null;
+    function startTouchDrag(phaseId) {
+      state.touch.active = true;
+      state.touch.sourceId = phaseId;
+      state.touch.dropId = phaseId;
+      showTouchGhost(phaseId);
       render();
     }
 
-    function handleTouchDragEnd() {
-      if (!state.touchDragId || state.isRunning) {
-        state.touchDragId = null;
-        state.touchDropId = null;
+    function handleTouchStart(phaseId, event) {
+      if (state.isRunning) return;
+
+      const touch = event.touches[0];
+      if (!touch) return;
+
+      resetTouchState();
+      state.touch.started = true;
+      state.touch.sourceId = phaseId;
+      state.touch.dropId = phaseId;
+      state.touch.startX = touch.clientX;
+      state.touch.startY = touch.clientY;
+      state.touch.x = touch.clientX;
+      state.touch.y = touch.clientY;
+
+      state.touch.holdTimer = setTimeout(() => {
+        if (!state.touch.started || state.touch.sourceId !== phaseId) return;
+        startTouchDrag(phaseId);
+      }, TOUCH_HOLD_MS);
+    }
+
+    function handleTouchMove(event) {
+      if (!state.touch.started && !state.touch.active) return;
+
+      const touch = event.touches[0];
+      if (!touch) return;
+
+      state.touch.x = touch.clientX;
+      state.touch.y = touch.clientY;
+
+      const deltaX = Math.abs(touch.clientX - state.touch.startX);
+      const deltaY = Math.abs(touch.clientY - state.touch.startY);
+
+      if (!state.touch.active) {
+        if (deltaX > 10 || deltaY > 10) {
+          clearTouchHoldTimer();
+        }
         return;
       }
 
-      if (state.touchDropId && state.touchDropId !== state.touchDragId) {
-        state.phases = reorder(state.phases, state.touchDragId, state.touchDropId);
+      event.preventDefault();
+      updateTouchGhostPosition(touch.clientX, touch.clientY);
+
+      const targetCard = getTouchPhaseCard(touch.clientX, touch.clientY);
+      const nextDropId = targetCard ? targetCard.dataset.phaseId : null;
+
+      if (nextDropId !== state.touch.dropId) {
+        state.touch.dropId = nextDropId;
+        render();
+      }
+    }
+
+    function handleTouchEnd() {
+      clearTouchHoldTimer();
+
+      if (state.touch.active && state.touch.sourceId && state.touch.dropId && state.touch.sourceId !== state.touch.dropId) {
+        state.phases = reorder(state.phases, state.touch.sourceId, state.touch.dropId);
       }
 
-      state.touchDragId = null;
-      state.touchDropId = null;
+      resetTouchState();
       render();
     }
 
@@ -765,10 +933,10 @@
 
       state.phases.forEach((phase, index) => {
         const phaseCard = document.createElement("div");
-        const isDropTarget = state.dragOverId === phase.id || state.touchDropId === phase.id;
-        const isTouchDragging = state.touchDragId === phase.id;
+        const isDropTarget = state.dragOverId === phase.id || (state.touch.active && state.touch.dropId === phase.id && state.touch.sourceId !== phase.id);
+        const isTouchSource = state.touch.active && state.touch.sourceId === phase.id;
 
-        phaseCard.className = `phase-card${isDropTarget ? " drag-over" : ""}${isTouchDragging ? " touch-dragging" : ""}`;
+        phaseCard.className = `phase-card${isDropTarget ? " touch-drop-target" : ""}${isTouchSource ? " touch-source-hidden" : ""}`;
         phaseCard.draggable = !state.isRunning && !isMobileView();
         phaseCard.dataset.phaseId = phase.id;
 
@@ -809,10 +977,11 @@
         const grip = document.createElement("div");
         grip.className = "grip-box";
         grip.innerHTML = '<span aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="5" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="9" cy="19" r="1.2"/><circle cx="15" cy="5" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="15" cy="19" r="1.2"/></svg></span>';
-        grip.addEventListener("touchstart", (event) => handleTouchDragStart(phase.id, event), { passive: true });
-        grip.addEventListener("touchmove", handleTouchDragMove, { passive: true });
-        grip.addEventListener("touchend", handleTouchDragEnd);
-        grip.addEventListener("touchcancel", handleTouchDragEnd);
+
+        grip.addEventListener("touchstart", (event) => handleTouchStart(phase.id, event), { passive: true });
+        grip.addEventListener("touchmove", handleTouchMove, { passive: false });
+        grip.addEventListener("touchend", handleTouchEnd);
+        grip.addEventListener("touchcancel", handleTouchEnd);
 
         const meta = document.createElement("div");
         meta.className = "phase-meta";
@@ -832,7 +1001,7 @@
           const chip = document.createElement("button");
           chip.className = `chip${phase.seconds === sec ? " active" : ""}`;
           chip.textContent = `${sec}s`;
-          chip.disabled = state.isRunning;
+          chip.disabled = state.isRunning || state.touch.active;
           chip.addEventListener("click", () => {
             phase.seconds = sec;
             render();
@@ -852,7 +1021,7 @@
         const btn = document.createElement("button");
         btn.className = `duration-btn${state.durationMinutes === option ? " active" : ""}`;
         btn.textContent = `${option} ${TEXT.minutes}`;
-        btn.disabled = state.isRunning;
+        btn.disabled = state.isRunning || state.touch.active;
         btn.addEventListener("click", () => {
           state.durationMinutes = option;
           render();
@@ -862,6 +1031,7 @@
     }
 
     function renderOrbContent() {
+      const currentPhase = getCurrentPhase();
       els.orbContent.innerHTML = "";
 
       if (!state.isRunning) {
@@ -874,11 +1044,17 @@
         return;
       }
 
+      const phaseName = document.createElement("div");
+      phaseName.className = "phase-name";
+      phaseName.textContent = currentPhase ? currentPhase.label : TEXT.ready;
+
       const stopBtn = document.createElement("button");
       stopBtn.className = "stop-btn";
       stopBtn.type = "button";
       stopBtn.textContent = TEXT.stop;
       stopBtn.addEventListener("click", stopSession);
+
+      els.orbContent.appendChild(phaseName);
       els.orbContent.appendChild(stopBtn);
     }
 
@@ -914,6 +1090,24 @@
         state.mobileMenuOpen = false;
       }
       syncMobileMenu();
+    });
+
+    document.addEventListener("touchmove", (event) => {
+      if (state.touch.active) {
+        event.preventDefault();
+      }
+    }, { passive: false });
+
+    document.addEventListener("touchend", () => {
+      if (state.touch.started || state.touch.active) {
+        handleTouchEnd();
+      }
+    });
+
+    document.addEventListener("touchcancel", () => {
+      if (state.touch.started || state.touch.active) {
+        handleTouchEnd();
+      }
     });
 
     setOrbScale(0.5, 0);
