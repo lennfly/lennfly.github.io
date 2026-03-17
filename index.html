@@ -56,23 +56,20 @@
       display: grid;
       grid-template-columns: 380px 1fr;
       gap: 32px;
+      align-items: start;
     }
 
-    .card {
+    .settings-column {
+      display: block;
+    }
+
+    .settings-card {
       border: 1px solid var(--border);
       border-radius: 34px;
       background: var(--card);
       box-shadow: var(--shadow);
       backdrop-filter: blur(8px);
-    }
-
-    .left-card { padding: 24px; }
-
-    .right-card {
       padding: 24px;
-      border-radius: 38px;
-      background: linear-gradient(180deg, rgba(250,247,240,0.96) 0%, rgba(238,244,235,0.96) 100%);
-      box-shadow: var(--shadow-strong);
     }
 
     .mobile-menu-toggle {
@@ -90,6 +87,8 @@
       box-shadow: 0 6px 18px rgba(91,112,98,0.05);
       width: fit-content;
       min-width: 0;
+      appearance: none;
+      cursor: pointer;
     }
 
     .mobile-menu-toggle svg {
@@ -102,7 +101,22 @@
       transform: rotate(180deg);
     }
 
-    .sidebar-panel {
+    .mobile-settings-panel {
+      display: none;
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+      padding: 16px;
+    }
+
+    .mobile-settings-panel.open {
+      display: block;
+    }
+
+    .desktop-settings {
       display: block;
     }
 
@@ -246,6 +260,15 @@
       background: var(--accent);
       color: var(--button-text);
       box-shadow: 0 4px 14px rgba(111,140,114,0.18);
+    }
+
+    .right-card {
+      border: 1px solid var(--border);
+      border-radius: 38px;
+      background: linear-gradient(180deg, rgba(250,247,240,0.96) 0%, rgba(238,244,235,0.96) 100%);
+      box-shadow: var(--shadow-strong);
+      backdrop-filter: blur(8px);
+      padding: 24px;
     }
 
     .status-row {
@@ -421,9 +444,18 @@
     }
 
     @media (max-width: 980px) {
-      .grid { grid-template-columns: 1fr; }
-      .orb-wrap { width: min(78vw, 430px); height: min(78vw, 430px); }
-      .orb-stage { min-height: 440px; }
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .orb-wrap {
+        width: min(78vw, 430px);
+        height: min(78vw, 430px);
+      }
+
+      .orb-stage {
+        min-height: 440px;
+      }
     }
 
     @media (max-width: 640px) {
@@ -438,23 +470,36 @@
         padding: calc(20px + env(safe-area-inset-top)) 14px calc(20px + env(safe-area-inset-bottom) + 16px) 14px;
       }
 
-      .left-card,
-      .right-card { padding: 18px; }
+      .grid {
+        gap: 16px;
+      }
 
-      .duration-grid { grid-template-columns: 1fr 1fr; }
+      .settings-column {
+        display: block;
+      }
+
+      .desktop-settings {
+        display: none;
+      }
 
       .mobile-menu-toggle {
         display: inline-flex;
-        margin-bottom: 14px;
       }
 
-      .sidebar-panel {
+      .mobile-settings-panel {
         display: none;
-        margin-top: 0;
       }
 
-      .sidebar-panel.open {
+      .mobile-settings-panel.open {
         display: block;
+      }
+
+      .right-card {
+        padding: 18px;
+      }
+
+      .duration-grid {
+        grid-template-columns: 1fr 1fr;
       }
     }
   </style>
@@ -463,23 +508,32 @@
   <div class="page">
     <div class="container">
       <div class="grid">
-        <div class="card left-card">
+        <div class="settings-column">
           <button class="mobile-menu-toggle" id="mobileMenuToggle" type="button" aria-expanded="false">
             <span id="mobileMenuLabel">Instellingen</span>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
           </button>
 
-          <div class="sidebar-panel" id="sidebarPanel">
-            <div id="phaseList" class="phase-list"></div>
+          <div class="mobile-settings-panel" id="mobileSettingsPanel">
+            <div id="phaseListMobile" class="phase-list"></div>
 
             <div class="duration-box">
-              <div id="durationLabel" class="section-label">Duur</div>
-              <div class="duration-grid" id="durationGrid"></div>
+              <div id="durationLabelMobile" class="section-label">Duur</div>
+              <div class="duration-grid" id="durationGridMobile"></div>
+            </div>
+          </div>
+
+          <div class="settings-card desktop-settings" id="desktopSettings">
+            <div id="phaseListDesktop" class="phase-list"></div>
+
+            <div class="duration-box">
+              <div id="durationLabelDesktop" class="section-label">Duur</div>
+              <div class="duration-grid" id="durationGridDesktop"></div>
             </div>
           </div>
         </div>
 
-        <div class="card right-card">
+        <div class="right-card">
           <div class="status-row">
             <span class="current" id="currentPhaseText">Klaar</span>
             <span class="status-pill" id="sessionTopText">5 min sessie</span>
@@ -556,9 +610,12 @@
     };
 
     const els = {
-      phaseList: document.getElementById("phaseList"),
-      durationLabel: document.getElementById("durationLabel"),
-      durationGrid: document.getElementById("durationGrid"),
+      phaseListDesktop: document.getElementById("phaseListDesktop"),
+      phaseListMobile: document.getElementById("phaseListMobile"),
+      durationLabelDesktop: document.getElementById("durationLabelDesktop"),
+      durationLabelMobile: document.getElementById("durationLabelMobile"),
+      durationGridDesktop: document.getElementById("durationGridDesktop"),
+      durationGridMobile: document.getElementById("durationGridMobile"),
       currentPhaseText: document.getElementById("currentPhaseText"),
       sessionTopText: document.getElementById("sessionTopText"),
       orbInner: document.getElementById("orbInner"),
@@ -569,7 +626,7 @@
       footerDuration: document.getElementById("footerDuration"),
       mobileMenuToggle: document.getElementById("mobileMenuToggle"),
       mobileMenuLabel: document.getElementById("mobileMenuLabel"),
-      sidebarPanel: document.getElementById("sidebarPanel"),
+      mobileSettingsPanel: document.getElementById("mobileSettingsPanel"),
       touchGhost: document.getElementById("touchGhost"),
     };
 
@@ -620,15 +677,19 @@
       return window.innerWidth <= 640;
     }
 
+    function getActivePhaseListEl() {
+      return isMobileView() ? els.phaseListMobile : els.phaseListDesktop;
+    }
+
     function syncMobileMenu() {
       if (!isMobileView()) {
-        els.sidebarPanel.classList.remove("open");
+        els.mobileSettingsPanel.classList.remove("open");
         els.mobileMenuToggle.classList.remove("open");
         els.mobileMenuToggle.setAttribute("aria-expanded", "false");
         return;
       }
 
-      els.sidebarPanel.classList.toggle("open", state.mobileMenuOpen);
+      els.mobileSettingsPanel.classList.toggle("open", state.mobileMenuOpen);
       els.mobileMenuToggle.classList.toggle("open", state.mobileMenuOpen);
       els.mobileMenuToggle.setAttribute("aria-expanded", String(state.mobileMenuOpen));
     }
@@ -924,105 +985,119 @@
       render();
     }
 
-    function renderPhaseList() {
-      els.phaseList.innerHTML = "";
+    function createPhaseCard(phase, index) {
+      const phaseCard = document.createElement("div");
+      const isDropTarget = state.dragOverId === phase.id || (state.touch.active && state.touch.dropId === phase.id && state.touch.sourceId !== phase.id);
+      const isTouchSource = state.touch.active && state.touch.sourceId === phase.id;
+
+      phaseCard.className = `phase-card${isDropTarget ? " touch-drop-target" : ""}${isTouchSource ? " touch-source-hidden" : ""}`;
+      phaseCard.draggable = !state.isRunning && !isMobileView();
+      phaseCard.dataset.phaseId = phase.id;
+
+      phaseCard.addEventListener("dragstart", () => {
+        if (state.isRunning) return;
+        state.draggedId = phase.id;
+      });
+
+      phaseCard.addEventListener("dragover", (e) => {
+        if (state.isRunning) return;
+        e.preventDefault();
+        state.dragOverId = phase.id;
+        phaseCard.classList.add("drag-over");
+      });
+
+      phaseCard.addEventListener("dragleave", () => {
+        phaseCard.classList.remove("drag-over");
+      });
+
+      phaseCard.addEventListener("drop", (e) => {
+        e.preventDefault();
+        if (!state.draggedId || state.draggedId === phase.id || state.isRunning) return;
+        state.phases = reorder(state.phases, state.draggedId, phase.id);
+        state.draggedId = null;
+        state.dragOverId = null;
+        render();
+      });
+
+      phaseCard.addEventListener("dragend", () => {
+        state.draggedId = null;
+        state.dragOverId = null;
+        render();
+      });
+
+      const head = document.createElement("div");
+      head.className = "phase-head";
+
+      const grip = document.createElement("div");
+      grip.className = "grip-box";
+      grip.innerHTML = '<span aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="5" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="9" cy="19" r="1.2"/><circle cx="15" cy="5" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="15" cy="19" r="1.2"/></svg></span>';
+
+      grip.addEventListener("touchstart", (event) => handleTouchStart(phase.id, event), { passive: true });
+      grip.addEventListener("touchmove", handleTouchMove, { passive: false });
+      grip.addEventListener("touchend", handleTouchEnd);
+      grip.addEventListener("touchcancel", handleTouchEnd);
+
+      const meta = document.createElement("div");
+      meta.className = "phase-meta";
+      meta.innerHTML = `
+        <div class="phase-step">${TEXT.step} ${index + 1}</div>
+        <div class="phase-label">${phase.label}</div>
+      `;
+
+      head.appendChild(grip);
+      head.appendChild(meta);
+      phaseCard.appendChild(head);
+
+      const chips = document.createElement("div");
+      chips.className = "chips";
+
+      SECOND_OPTIONS.forEach((sec) => {
+        const chip = document.createElement("button");
+        chip.className = `chip${phase.seconds === sec ? " active" : ""}`;
+        chip.textContent = `${sec}s`;
+        chip.disabled = state.isRunning || state.touch.active;
+        chip.addEventListener("click", () => {
+          phase.seconds = sec;
+          render();
+        });
+        chips.appendChild(chip);
+      });
+
+      phaseCard.appendChild(chips);
+      return phaseCard;
+    }
+
+    function renderPhaseLists() {
+      els.phaseListDesktop.innerHTML = "";
+      els.phaseListMobile.innerHTML = "";
 
       state.phases.forEach((phase, index) => {
-        const phaseCard = document.createElement("div");
-        const isDropTarget = state.dragOverId === phase.id || (state.touch.active && state.touch.dropId === phase.id && state.touch.sourceId !== phase.id);
-        const isTouchSource = state.touch.active && state.touch.sourceId === phase.id;
-
-        phaseCard.className = `phase-card${isDropTarget ? " touch-drop-target" : ""}${isTouchSource ? " touch-source-hidden" : ""}`;
-        phaseCard.draggable = !state.isRunning && !isMobileView();
-        phaseCard.dataset.phaseId = phase.id;
-
-        phaseCard.addEventListener("dragstart", () => {
-          if (state.isRunning) return;
-          state.draggedId = phase.id;
-        });
-
-        phaseCard.addEventListener("dragover", (e) => {
-          if (state.isRunning) return;
-          e.preventDefault();
-          state.dragOverId = phase.id;
-          phaseCard.classList.add("drag-over");
-        });
-
-        phaseCard.addEventListener("dragleave", () => {
-          phaseCard.classList.remove("drag-over");
-        });
-
-        phaseCard.addEventListener("drop", (e) => {
-          e.preventDefault();
-          if (!state.draggedId || state.draggedId === phase.id || state.isRunning) return;
-          state.phases = reorder(state.phases, state.draggedId, phase.id);
-          state.draggedId = null;
-          state.dragOverId = null;
-          render();
-        });
-
-        phaseCard.addEventListener("dragend", () => {
-          state.draggedId = null;
-          state.dragOverId = null;
-          render();
-        });
-
-        const head = document.createElement("div");
-        head.className = "phase-head";
-
-        const grip = document.createElement("div");
-        grip.className = "grip-box";
-        grip.innerHTML = '<span aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="5" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="9" cy="19" r="1.2"/><circle cx="15" cy="5" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="15" cy="19" r="1.2"/></svg></span>';
-
-        grip.addEventListener("touchstart", (event) => handleTouchStart(phase.id, event), { passive: true });
-        grip.addEventListener("touchmove", handleTouchMove, { passive: false });
-        grip.addEventListener("touchend", handleTouchEnd);
-        grip.addEventListener("touchcancel", handleTouchEnd);
-
-        const meta = document.createElement("div");
-        meta.className = "phase-meta";
-        meta.innerHTML = `
-          <div class="phase-step">${TEXT.step} ${index + 1}</div>
-          <div class="phase-label">${phase.label}</div>
-        `;
-
-        head.appendChild(grip);
-        head.appendChild(meta);
-        phaseCard.appendChild(head);
-
-        const chips = document.createElement("div");
-        chips.className = "chips";
-
-        SECOND_OPTIONS.forEach((sec) => {
-          const chip = document.createElement("button");
-          chip.className = `chip${phase.seconds === sec ? " active" : ""}`;
-          chip.textContent = `${sec}s`;
-          chip.disabled = state.isRunning || state.touch.active;
-          chip.addEventListener("click", () => {
-            phase.seconds = sec;
-            render();
-          });
-          chips.appendChild(chip);
-        });
-
-        phaseCard.appendChild(chips);
-        els.phaseList.appendChild(phaseCard);
+        els.phaseListDesktop.appendChild(createPhaseCard(phase, index));
+        els.phaseListMobile.appendChild(createPhaseCard(phase, index));
       });
     }
 
     function renderDurationButtons() {
-      els.durationGrid.innerHTML = "";
+      els.durationGridDesktop.innerHTML = "";
+      els.durationGridMobile.innerHTML = "";
+      els.durationLabelDesktop.textContent = TEXT.duration;
+      els.durationLabelMobile.textContent = TEXT.duration;
 
       DURATION_OPTIONS.forEach((option) => {
-        const btn = document.createElement("button");
-        btn.className = `duration-btn${state.durationMinutes === option ? " active" : ""}`;
-        btn.textContent = `${option} ${TEXT.minutes}`;
-        btn.disabled = state.isRunning || state.touch.active;
-        btn.addEventListener("click", () => {
-          state.durationMinutes = option;
-          render();
-        });
-        els.durationGrid.appendChild(btn);
+        const createBtn = () => {
+          const btn = document.createElement("button");
+          btn.className = `duration-btn${state.durationMinutes === option ? " active" : ""}`;
+          btn.textContent = `${option} ${TEXT.minutes}`;
+          btn.disabled = state.isRunning || state.touch.active;
+          btn.addEventListener("click", () => {
+            state.durationMinutes = option;
+            render();
+          });
+          return btn;
+        };
+
+        els.durationGridDesktop.appendChild(createBtn());
+        els.durationGridMobile.appendChild(createBtn());
       });
     }
 
@@ -1055,7 +1130,6 @@
     }
 
     function renderStaticTexts() {
-      els.durationLabel.textContent = TEXT.duration;
       els.cycleLabel.textContent = TEXT.cycle;
       els.mobileMenuLabel.textContent = TEXT.menu;
       document.documentElement.lang = "nl";
@@ -1066,7 +1140,7 @@
     function render() {
       const currentPhase = getCurrentPhase();
       renderStaticTexts();
-      renderPhaseList();
+      renderPhaseLists();
       renderDurationButtons();
       renderOrbContent();
       els.currentPhaseText.textContent = currentPhase ? currentPhase.label : TEXT.ready;
@@ -1086,6 +1160,7 @@
         state.mobileMenuOpen = false;
       }
       syncMobileMenu();
+      render();
     });
 
     document.addEventListener("touchmove", (event) => {
