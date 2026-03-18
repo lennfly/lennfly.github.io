@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Ezra Hunger Game</title>
+  <style>
+    :root {
+      --bg1: #eef8ff;
+      --bg2: #fff7e8;
+      --panel: rgba(255,255,255,0.9);
+      --text: #233042;
+      --accent: #ffb703;
+      --ok: #06d6a0;
+      --warn: #ff9f1c;
+      --danger: #ef476f;
+      --shadow: 0 12px 30px rgba(35,48,66,0.16);
+      --world-w: 2200px;
+      --world-h: 1400px;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: Inter, ui-rounded, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, var(--bg1), var(--bg2));
+      touch-action: manipulation;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+    }
+
+    .app {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(180deg, #bfe8ff 0%, #dff3ff 32%, #f6eac8 33%, #ecd89e 100%);
+      user-select: none;
+    }
+
+    .hud {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: grid;
+      gap: 10px;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .panel {
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.7);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 10px 14px;
+      pointer-events: auto;
+    }
+
+    .title {
+      font-weight: 900;
+      letter-spacing: 0.02em;
+      font-size: clamp(18px, 2.8vw, 28px);
+    }
+
+    .pill {
+      min-width: 92px;
+      text-align: center;
+      font-weight: 800;
+      font-size: 16px;
+    }
+
+    .meters {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .meter-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 7px;
+    }
+
+    .track {
+      width: 100%;
+      height: 14px;
+      border-radius: 999px;
+      background: rgba(35,48,66,0.12);
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 100%;
+      border-radius: inherit;
+      transition: width 0.18s linear;
+    }
+
+    .hunger-fill {
+      background: linear-gradient(90deg, #ffd166, #ff9f1c, #ef476f);
+      width: 20%;
+    }
+
+    .mood-fill {
+      background: linear-gradient(90deg, #06d6a0, #70c1b3, #118ab2);
+      width: 80%;
+    }
+
+    .camera {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .world {
+      position: absolute;
+      width: var(--world-w);
+      height: var(--world-h);
+      left: 0;
+      top: 0;
+      transform-origin: top left;
+    }
+
+    .sky-cloud {
+      position: absolute;
+      background: rgba(255,255,255,0.78);
+      border-radius: 999px;
+      filter: blur(1px);
+    }
+
+    .ground {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 50%;
+      background:
+        radial-gradient(circle at 15% 20%, rgba(255,255,255,0.18), transparent 18%),
+        radial-gradient(circle at 80% 10%, rgba(255,255,255,0.16), transparent 16%),
+        linear-gradient(180deg, #8fd67e 0%, #6bb85f 50%, #5ca44f 100%);
+    }
+
+    .path {
+      position: absolute;
+      left: 320px;
+      top: 540px;
+      width: 1540px;
+      height: 520px;
+      background: #d8c290;
+      border-radius: 180px;
+      transform: rotate(-6deg);
+      opacity: 0.95;
+    }
+
+    .pond {
+      position: absolute;
+      width: 250px;
+      height: 130px;
+      background: radial-gradient(circle at 30% 30%, #d9f6ff, #74ccea 70%, #59b7d8 100%);
+      border-radius: 50%;
+      opacity: 0.95;
+      box-shadow: inset 0 8px 18px rgba(255,255,255,0.25);
+    }
+
+    .tree, .bush, .rock, .fence, .flower-patch {
+      position: absolute;
+    }
+
+    .tree .trunk {
+      position: absolute;
+      width: 24px;
+      height: 70px;
+      background: #8e5f3c;
+      left: 33px;
+      top: 56px;
+      border-radius: 10px;
+    }
+
+    .tree .leaf {
+      position: absolute;
+      width: 90px;
+      height: 90px;
+      background: #5fae57;
+      border-radius: 50%;
+      box-shadow:
+        28px 10px 0 0 #72be67,
+        -22px 14px 0 0 #68b45e,
+        10px -18px 0 0 #79c86c;
+    }
+
+    .bush {
+      background: #5daa54;
+      border-radius: 999px;
+      box-shadow: inset 0 8px 0 rgba(255,255,255,0.12);
+    }
+
+    .rock {
+      background: #b9bfca;
+      border-radius: 50% 45% 42% 48%;
+      box-shadow: inset 0 8px 0 rgba(255,255,255,0.18);
+    }
+
+    .flower-patch {
+      width: 120px;
+      height: 60px;
+      background:
+        radial-gradient(circle at 15% 60%, #ff6fa1 0 6px, transparent 7px),
+        radial-gradient(circle at 34% 38%, #ffd166 0 6px, transparent 7px),
+        radial-gradient(circle at 56% 62%, #a56eff 0 6px, transparent 7px),
+        radial-gradient(circle at 80% 30%, #ff8c42 0 6px, transparent 7px),
+        radial-gradient(circle at 92% 64%, #fff 0 4px, transparent 5px),
+        radial-gradient(circle at 20% 100%, #66b85c 0 30px, transparent 31px),
+        radial-gradient(circle at 60% 100%, #66b85c 0 30px, transparent 31px);
+      opacity: 0.95;
+    }
+
+    .fence {
+      width: 140px;
+      height: 70px;
+      background: repeating-linear-gradient(90deg, #c79863 0 12px, #b88451 12px 18px);
+      clip-path: polygon(0 100%, 0 38%, 8% 18%, 16% 38%, 16% 100%, 28% 100%, 28% 38%, 36% 18%, 44% 38%, 44% 100%, 56% 100%, 56% 38%, 64% 18%, 72% 38%, 72% 100%, 84% 100%, 84% 38%, 92% 18%, 100% 38%, 100% 100%);
+      border-radius: 10px;
+      opacity: 0.85;
+    }
+
+    .entity {
+      position: absolute;
+      z-index: 5;
+      transform-origin: center bottom;
+      filter: drop-shadow(0 10px 12px rgba(0,0,0,0.16));
+    }
+
+    .entity .shadow {
+      position: absolute;
+      left: 50%;
+      bottom: -2px;
+      width: 58%;
+      height: 12px;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.16);
+      border-radius: 50%;
+      filter: blur(3px);
+    }
+
+    .player {
+      width: 68px;
+      height: 74px;
+    }
+
+    .player .body {
+      position: absolute;
+      left: 20px;
+      top: 24px;
+      width: 28px;
+      height: 30px;
+      background: #2e5b9a;
+      border-radius: 12px 12px 10px 10px;
+    }
+
+    .player .head {
+      position: absolute;
+      left: 19px;
+      top: 4px;
+      width: 30px;
+      height: 30px;
+      background: #ffd9bf;
+      border-radius: 50%;
+      border: 2px solid rgba(0,0,0,0.06);
+    }
+
+    .player .hair {
+      position: absolute;
+      left: 20px;
+      top: 0;
+      width: 28px;
+      height: 14px;
+      background: #d8b06c;
+      clip-path: polygon(0% 100%, 10% 40%, 24% 75%, 38% 18%, 50% 72%, 62% 22%, 76% 75%, 90% 30%, 100% 100%);
+    }
+
+    .player .eye {
+      position: absolute;
+      top: 16px;
+      width: 4px;
+      height: 4px;
+      background: #233042;
+      border-radius: 50%;
+    }
+
+    .player .eye.left { left: 27px; }
+    .player .eye.right { left: 37px; }
+    .player .mouth {
+      position: absolute;
+      left: 30px;
+      top: 22px;
+      width: 8px;
+      height: 4px;
+      border-bottom: 2px solid #b25e5e;
+      border-radius: 0 0 8px 8px;
+    }
+
+    .player .arm, .player .leg {
+      position: absolute;
+      background: #ffd9bf;
+      border-radius: 999px;
+    }
+
+    .player .arm { width: 7px; height: 22px; top: 28px; }
+    .player .arm.left { left: 13px; transform: rotate(22deg); }
+    .player .arm.right { left: 47px; transform: rotate(-22deg); }
+    .player .leg { width: 8px; height: 18px; top: 52px; background: #23436e; }
+    .player .leg.left { left: 24px; }
+    .player .leg.right { left: 36px; }
+
+    .enemy {
+      width: 118px;
+      height: 130px;
+      z-index: 6;
+    }
+
+    .enemy .torso {
+      position: absolute;
+      left: 28px;
+      top: 54px;
+      width: 62px;
+      height: 48px;
+      background: #243d67;
+      border-radius: 18px;
+      overflow: hidden;
+    }
+
+    .enemy .shirt-text {
+      position: absolute;
+      left: 38px;
+      top: 73px;
+      color: #d9d1af;
+      font-weight: 900;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+    }
+
+    .enemy .head {
+      position: absolute;
+      left: 31px;
+      top: 14px;
+      width: 56px;
+      height: 56px;
+      background: #ffd8c5;
+      border-radius: 50%;
+      border: 2px solid rgba(0,0,0,0.05);
+    }
+
+    .enemy .hair {
+      position: absolute;
+      left: 29px;
+      top: 0;
+      width: 60px;
+      height: 24px;
+      background: #d4b084;
+      clip-path: polygon(0% 100%, 4% 40%, 14% 68%, 20% 18%, 32% 74%, 44% 20%, 52% 70%, 63% 10%, 74% 74%, 84% 26%, 94% 70%, 100% 100%);
+      border-radius: 16px 16px 4px 4px;
+    }
+
+    .enemy .ear {
+      position: absolute;
+      width: 10px;
+      height: 14px;
+      background: #ffd8c5;
+      top: 34px;
+      border-radius: 999px;
+    }
+
+    .enemy .ear.left { left: 26px; }
+    .enemy .ear.right { left: 82px; }
+
+    .enemy .brow {
+      position: absolute;
+      width: 14px;
+      height: 3px;
+      background: #7d5d46;
+      top: 31px;
+      border-radius: 999px;
+      transition: transform 0.18s linear, top 0.18s linear;
+    }
+
+    .enemy .brow.left { left: 40px; transform: rotate(4deg); }
+    .enemy .brow.right { left: 63px; transform: rotate(-4deg); }
+
+    .enemy .eye {
+      position: absolute;
+      top: 35px;
+      width: 11px;
+      height: 10px;
+      background: white;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+
+    .enemy .eye.left { left: 41px; }
+    .enemy .eye.right { left: 64px; }
+
+    .enemy .pupil {
+      position: absolute;
+      top: 3px;
+      left: 4px;
+      width: 5px;
+      height: 5px;
+      background: #50739d;
+      border-radius: 50%;
+    }
+
+    .enemy .nose {
+      position: absolute;
+      left: 57px;
+      top: 43px;
+      width: 7px;
+      height: 9px;
+      border-radius: 999px;
+      background: rgba(214,142,132,0.42);
+    }
+
+    .enemy .mouth {
+      position: absolute;
+      left: 47px;
+      top: 51px;
+      width: 24px;
+      height: 10px;
+      border-radius: 0 0 18px 18px;
+      border-bottom: 3px solid #ab4c4c;
+      transition: all 0.18s linear;
+    }
+
+    .enemy .arm {
+      position: absolute;
+      width: 12px;
+      height: 40px;
+      background: #ffd8c5;
+      top: 58px;
+      border-radius: 999px;
+      transform-origin: top center;
+      transition: transform 0.18s linear;
+    }
+
+    .enemy .arm.left { left: 18px; transform: rotate(22deg); }
+    .enemy .arm.right { left: 87px; transform: rotate(-22deg); }
+
+    .enemy .leg {
+      position: absolute;
+      width: 13px;
+      height: 34px;
+      background: #223a62;
+      top: 98px;
+      border-radius: 999px;
+    }
+
+    .enemy .leg.left { left: 40px; }
+    .enemy .leg.right { left: 63px; }
+
+    .enemy.calm { animation: bob 1.6s ease-in-out infinite; }
+    .enemy.annoyed { animation: bob 1.0s ease-in-out infinite; }
+    .enemy.angry { animation: stomp 0.45s linear infinite; }
+    .enemy.furious { animation: rage 0.22s linear infinite; }
+
+    .player.fallen {
+      animation: playerFall 0.55s ease-out forwards;
+    }
+
+    @keyframes playerFall {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      55% { transform: translate(-50%, -50%) rotate(34deg) translateY(6px); }
+      100% { transform: translate(-50%, -50%) rotate(84deg) translateY(18px); }
+    }
+
+    @keyframes bob {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+
+    @keyframes stomp {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      25% { transform: translateY(-1px) rotate(-1deg); }
+      75% { transform: translateY(1px) rotate(1deg); }
+    }
+
+    @keyframes rage {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-2px); }
+      50% { transform: translateX(2px); }
+      75% { transform: translateX(-1px); }
+    }
+
+    .food-item {
+      position: absolute;
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      font-size: 32px;
+      z-index: 4;
+      filter: drop-shadow(0 10px 10px rgba(0,0,0,0.12));
+      transform: translate(-50%, -50%);
+    }
+
+    .food-item.bounce {
+      animation: pickup 0.25s ease-out forwards;
+    }
+
+    @keyframes pickup {
+      from { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      to { transform: translate(-50%, -68%) scale(1.35); opacity: 0; }
+    }
+
+    .controls {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
+      z-index: 20;
+      display: grid;
+      gap: 10px;
+    }
+
+    .info {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 800;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--ok);
+      box-shadow: 0 0 0 4px rgba(6,214,160,0.15);
+    }
+
+    .dot.warn {
+      background: var(--warn);
+      box-shadow: 0 0 0 4px rgba(255,159,28,0.15);
+    }
+
+    .dot.danger {
+      background: var(--danger);
+      box-shadow: 0 0 0 4px rgba(239,71,111,0.15);
+    }
+
+    .pad-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .pad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .pad-middle {
+      display: grid;
+      grid-template-rows: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 22px;
+      padding: 16px 14px;
+      font-weight: 900;
+      font-size: 18px;
+      color: var(--text);
+      background: rgba(255,255,255,0.92);
+      box-shadow: var(--shadow);
+      min-height: 60px;
+    }
+
+    .btn:active { transform: scale(0.98); }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      place-items: center;
+      background: rgba(17, 30, 45, 0.22);
+      padding: 20px;
+    }
+
+    .card {
+      width: min(92vw, 620px);
+      background: rgba(255,255,255,0.96);
+      border: 1px solid rgba(255,255,255,0.85);
+      border-radius: 28px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.18);
+      padding: 22px;
+      text-align: center;
+    }
+
+    .card h1, .card h2 {
+      margin: 0 0 10px;
+      line-height: 1.05;
+    }
+
+    .card p {
+      margin: 0 0 14px;
+      line-height: 1.45;
+      font-size: 16px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .primary {
+      background: linear-gradient(180deg, #ffd166, #ffb703);
+    }
+
+    .toast {
+      position: absolute;
+      left: 50%;
+      top: 110px;
+      transform: translateX(-50%);
+      z-index: 25;
+      background: rgba(35,48,66,0.88);
+      color: white;
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-weight: 800;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease;
+    }
+
+    .toast.show { opacity: 1; }
+
+    @media (max-width: 820px) {
+      .topbar { grid-template-columns: 1fr auto; }
+      .topbar .title { grid-column: 1 / -1; }
+      .meters { grid-template-columns: 1fr; }
+      .pad-row { grid-template-columns: 1fr; }
+      .pad-middle { grid-template-columns: repeat(3, 1fr); grid-template-rows: none; }
+      .btn { min-height: 56px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <div class="hud">
+      <div class="topbar">
+        <div class="panel title">Ezra Hunger Game</div>
+        <div class="panel pill">Score: <span id="score">0</span></div>
+        <div class="panel pill">Tijd: <span id="time">60</span></div>
+      </div>
+      <div class="meters">
+        <div class="panel">
+          <div class="meter-label"><span>Honger</span><span id="hungerText">18%</span></div>
+          <div class="track"><div class="fill hunger-fill" id="hungerFill"></div></div>
+        </div>
+      </div>
+    </div>
+        </div>
+        <div class="panel">
+          <div class="meter-label"><span>Stemming</span><span id="moodText">Rustig</span></div>
+          <div class="track"><div class="fill mood-fill" id="moodFill"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="camera" id="camera">
+      <div class="world" id="world">
+        <div class="sky-cloud" style="left:120px; top:90px; width:170px; height:46px"></div>
+        <div class="sky-cloud" style="left:1680px; top:130px; width:210px; height:58px"></div>
+        <div class="sky-cloud" style="left:980px; top:210px; width:130px; height:36px"></div>
+
+        <div class="ground"></div>
+        <div class="path"></div>
+        <div class="pond" style="left:260px; top:880px"></div>
+        <div class="pond" style="left:1640px; top:760px; width:210px; height:110px"></div>
+
+        <div class="tree" style="left:110px; top:540px"><div class="trunk"></div><div class="leaf"></div></div>
+        <div class="tree" style="left:280px; top:380px"><div class="trunk"></div><div class="leaf"></div></div>
+        <div class="tree" style="left:560px; top:1040px"><div class="trunk"></div><div class="leaf"></div></div>
+        <div class="tree" style="left:920px; top:360px"><div class="trunk"></div><div class="leaf"></div></div>
+        <div class="tree" style="left:1260px; top:1010px"><div class="trunk"></div><div class="leaf"></div></div>
+        <div class="tree" style="left:1700px; top:500px"><div class="trunk"></div><div class="leaf"></div></div>
+        <div class="tree" style="left:1930px; top:980px"><div class="trunk"></div><div class="leaf"></div></div>
+
+        <div class="bush" style="left:210px; top:690px; width:130px; height:64px"></div>
+        <div class="bush" style="left:710px; top:520px; width:110px; height:58px"></div>
+        <div class="bush" style="left:1080px; top:1110px; width:140px; height:64px"></div>
+        <div class="bush" style="left:1490px; top:530px; width:150px; height:68px"></div>
+        <div class="bush" style="left:1840px; top:860px; width:120px; height:60px"></div>
+
+        <div class="flower-patch" style="left:430px; top:860px"></div>
+        <div class="flower-patch" style="left:970px; top:650px"></div>
+        <div class="flower-patch" style="left:1470px; top:950px"></div>
+
+        <div class="rock" style="left:820px; top:915px; width:70px; height:48px"></div>
+        <div class="rock" style="left:1380px; top:640px; width:58px; height:40px"></div>
+        <div class="rock" style="left:330px; top:1110px; width:84px; height:54px"></div>
+
+        <div class="fence" style="left:90px; top:1240px"></div>
+        <div class="fence" style="left:1880px; top:1180px"></div>
+
+        <div class="entity enemy calm" id="enemy">
+          <div class="shadow"></div>
+          <div class="hair"></div>
+          <div class="ear left"></div>
+          <div class="ear right"></div>
+          <div class="head"></div>
+          <div class="brow left" id="browLeft"></div>
+          <div class="brow right" id="browRight"></div>
+          <div class="eye left"><div class="pupil"></div></div>
+          <div class="eye right"><div class="pupil"></div></div>
+          <div class="nose"></div>
+          <div class="mouth" id="enemyMouth"></div>
+          <div class="arm left" id="armLeft"></div>
+          <div class="arm right" id="armRight"></div>
+          <div class="torso"></div>
+          <div class="shirt-text">EZRA</div>
+          <div class="leg left"></div>
+          <div class="leg right"></div>
+        </div>
+
+        <div class="entity player" id="player">
+          <div class="shadow"></div>
+          <div class="hair"></div>
+          <div class="head"></div>
+          <div class="eye left"></div>
+          <div class="eye right"></div>
+          <div class="mouth"></div>
+          <div class="arm left"></div>
+          <div class="arm right"></div>
+          <div class="body"></div>
+          <div class="leg left"></div>
+          <div class="leg right"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <div class="controls">
+      <div class="panel info">
+        <div>Loop door de wereld, verzamel eten en voer Ezra voordat hij je neerslaat.</div>
+      </div>
+      <div class="pad-row">
+        <div class="pad">
+          <button class="btn" id="leftBtn">◀</button>
+          <button class="btn" id="downBtn">▼</button>
+          <button class="btn" id="rightBtn">▶</button>
+        </div>
+        <div class="pad-middle">
+          <button class="btn" id="upBtn">▲</button>
+          <button class="btn" id="feedBtn">Voer Ezra</button>
+          <button class="btn" id="pauseBtn">Pauze</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="startOverlay">
+      <div class="card">
+        <h1>Ezra Hunger Game</h1>
+        <p>Verzamel banaan, snoep, chocola en koekjes die verspreid in de wereld liggen. Alles wat je pakt maakt Ezra minder hongerig. Boven de 50% honger komt hij achter je aan. Houd het 1 minuut vol om te winnen.</p>
+        <div class="row">
+          <button class="btn primary" id="startBtn">Start spel</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="gameOverOverlay" style="display:none;">
+      <div class="card">
+        <h2 id="gameOverTitle">Af!</h2>
+        <p id="gameOverText"></p>
+        <div class="row">
+          <button class="btn primary" id="restartBtn">Opnieuw</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const WORLD_W = 2200;
+    const WORLD_H = 1400;
+    const PLAYER_SIZE = 68;
+    const ENEMY_SIZE = 118;
+
+    const state = {
+      running: false,
+      paused: false,
+      gameOver: false,
+      isKnockedDown: false,
+      score: 0,
+      timeLeft: 60,
+      hunger: 18,
+      inventory: 0,
+      playerX: 1080,
+      playerY: 980,
+      playerSpeed: 4.1,
+      enemyX: 820,
+      enemyY: 720,
+      enemyBaseSpeed: 1.2,
+      moveLeft: false,
+      moveRight: false,
+      moveUp: false,
+      moveDown: false,
+      foods: [],
+      foodRespawnTimer: 0,
+      hungerTick: 0,
+      toastTimer: null,
+      lastTime: 0,
+      audioCtx: null,
+      growlCooldown: 0,
+      stepAudioCooldown: 0,
+      enemyAttackTimer: 0,
+    };
+
+    const FOODS = {
+      banana: { emoji: '🍌', effect: -24, points: 12, label: 'Banaan' },
+      candy: { emoji: '🍬', effect: -15, points: 8, label: 'Snoep' },
+      choco: { emoji: '🍫', effect: -20, points: 10, label: 'Chocola' },
+      cookie: { emoji: '🍪', effect: -18, points: 9, label: 'Koek' },
+    };
+
+    const FOOD_SPAWNS = [
+      [470, 780], [620, 925], [860, 700], [980, 880], [1180, 590], [1340, 890],
+      [1530, 1040], [1730, 700], [1890, 930], [330, 1040], [760, 1120], [1450, 650]
+    ];
+
+    const app = document.getElementById('app');
+    const camera = document.getElementById('camera');
+    const world = document.getElementById('world');
+    const player = document.getElementById('player');
+    const enemy = document.getElementById('enemy');
+    const hungerFill = document.getElementById('hungerFill');
+        const hungerText = document.getElementById('hungerText');
+        const scoreEl = document.getElementById('score');
+    const timeEl = document.getElementById('time');
+            const startOverlay = document.getElementById('startOverlay');
+    const gameOverOverlay = document.getElementById('gameOverOverlay');
+    const gameOverTitle = document.getElementById('gameOverTitle');
+    const gameOverText = document.getElementById('gameOverText');
+    const enemyMouth = document.getElementById('enemyMouth');
+    const browLeft = document.getElementById('browLeft');
+    const browRight = document.getElementById('browRight');
+    const armLeft = document.getElementById('armLeft');
+    const armRight = document.getElementById('armRight');
+    const toast = document.getElementById('toast');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const feedBtn = document.getElementById('feedBtn');
+
+    function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+    function rand(min, max) { return Math.random() * (max - min) + min; }
+    function dist(ax, ay, bx, by) { return Math.hypot(ax - bx, ay - by); }
+
+    function setToast(text) {
+      toast.textContent = text;
+      toast.classList.add('show');
+      clearTimeout(state.toastTimer);
+      state.toastTimer = setTimeout(() => toast.classList.remove('show'), 900);
+    }
+
+    function ensureAudio() {
+      if (!state.audioCtx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return null;
+        state.audioCtx = new Ctx();
+      }
+      if (state.audioCtx.state === 'suspended') state.audioCtx.resume();
+      return state.audioCtx;
+    }
+
+    function playTone(freq = 220, duration = 0.12, type = 'sine', volume = 0.03, startTime = 0) {
+      const ctx = ensureAudio();
+      if (!ctx) return;
+      const now = ctx.currentTime + startTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, now);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(volume, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + duration + 0.02);
+    }
+
+    function playNoise(duration = 0.12, volume = 0.02, highpass = 500) {
+      const ctx = ensureAudio();
+      if (!ctx) return;
+      const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * duration), ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = highpass;
+      const gain = ctx.createGain();
+      const now = ctx.currentTime;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(volume, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      src.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      src.start(now);
+      src.stop(now + duration + 0.02);
+    }
+
+    function playPickupSound() {
+      playTone(660, 0.08, 'triangle', 0.035, 0);
+      playTone(880, 0.08, 'triangle', 0.028, 0.05);
+    }
+
+    function playFeedSound() {
+      playTone(420, 0.09, 'sine', 0.035, 0);
+      playTone(520, 0.12, 'sine', 0.028, 0.06);
+    }
+
+    function playGrowlSound() {
+      playTone(95, 0.24, 'sawtooth', 0.03, 0);
+      playTone(72, 0.28, 'square', 0.022, 0.04);
+      playNoise(0.18, 0.008, 900);
+    }
+
+    function playHitSound() {
+      playTone(140, 0.08, 'square', 0.04, 0);
+      playNoise(0.1, 0.03, 700);
+      playTone(95, 0.12, 'sawtooth', 0.03, 0.05);
+      playNoise(0.12, 0.025, 550);
+      playTone(120, 0.1, 'square', 0.03, 0.12);
+    }
+
+    function playStepSound() {
+      playTone(180, 0.04, 'triangle', 0.01, 0);
+    }
+
+    function updateHUD() {
+      const hunger = clamp(state.hunger, 0, 100);
+      hungerFill.style.width = hunger + '%';
+      hungerText.textContent = Math.round(hunger) + '%';
+      scoreEl.textContent = state.score + ' | Eten: ' + state.inventory;
+      timeEl.textContent = Math.ceil(state.timeLeft);
+
+      enemy.className = 'entity enemy calm';
+      enemyMouth.style.width = '18px';
+      enemyMouth.style.height = '8px';
+      enemyMouth.style.left = '50px';
+      enemyMouth.style.top = '52px';
+      enemyMouth.style.borderBottomWidth = '3px';
+      enemyMouth.style.borderRadius = '0 0 18px 18px';
+      browLeft.style.top = '31px';
+      browRight.style.top = '31px';
+      browLeft.style.transform = 'rotate(4deg)';
+      browRight.style.transform = 'rotate(-4deg)';
+      armLeft.style.transform = 'rotate(22deg)';
+      armRight.style.transform = 'rotate(-22deg)';
+
+      if (hunger >= 85) {
+        enemy.className = 'entity enemy furious';
+        enemyMouth.style.width = '30px';
+        enemyMouth.style.height = '18px';
+        enemyMouth.style.left = '44px';
+        enemyMouth.style.top = '46px';
+        enemyMouth.style.borderBottomWidth = '6px';
+        enemyMouth.style.borderRadius = '0 0 16px 16px';
+        browLeft.style.top = '28px';
+        browRight.style.top = '28px';
+        browLeft.style.transform = 'rotate(-18deg)';
+        browRight.style.transform = 'rotate(18deg)';
+        armLeft.style.transform = 'rotate(46deg)';
+        armRight.style.transform = 'rotate(-46deg)';
+      } else if (hunger >= 70) {
+        enemy.className = 'entity enemy angry';
+        enemyMouth.style.width = '26px';
+        enemyMouth.style.height = '14px';
+        enemyMouth.style.left = '46px';
+        enemyMouth.style.top = '49px';
+        enemyMouth.style.borderBottomWidth = '5px';
+        browLeft.style.transform = 'rotate(-12deg)';
+        browRight.style.transform = 'rotate(12deg)';
+        armLeft.style.transform = 'rotate(34deg)';
+        armRight.style.transform = 'rotate(-34deg)';
+      } else if (hunger > 50) {
+        enemy.className = 'entity enemy annoyed';
+        enemyMouth.style.width = '22px';
+        enemyMouth.style.height = '10px';
+        enemyMouth.style.left = '48px';
+        enemyMouth.style.top = '51px';
+        enemyMouth.style.borderBottomWidth = '4px';
+        browLeft.style.transform = 'rotate(-6deg)';
+        browRight.style.transform = 'rotate(6deg)';
+        armLeft.style.transform = 'rotate(28deg)';
+        armRight.style.transform = 'rotate(-28deg)';
+      } else if (hunger >= 30) {
+        enemyMouth.style.width = '20px';
+        enemyMouth.style.left = '49px';
+        browLeft.style.transform = 'rotate(-2deg)';
+        browRight.style.transform = 'rotate(2deg)';
+      }
+
+      feedBtn.textContent = 'Voer Ezra (' + state.inventory + ')';
+    }
+
+    function positionEntity() {
+      player.style.left = state.playerX + 'px';
+      player.style.top = state.playerY + 'px';
+      enemy.style.left = state.enemyX + 'px';
+      enemy.style.top = state.enemyY + 'px';
+    }
+
+    function updateCamera() {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const camX = clamp(state.playerX - vw / 2, 0, WORLD_W - vw);
+      const camY = clamp(state.playerY - vh / 2, 0, WORLD_H - vh);
+      world.style.transform = `translate(${-camX}px, ${-camY}px)`;
+    }
+
+    function makeFood(type, x, y) {
+      const el = document.createElement('div');
+      el.className = 'food-item';
+      el.textContent = FOODS[type].emoji;
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+      el.style.opacity = '0';
+      el.style.transition = 'opacity 0.8s ease';
+      world.appendChild(el);
+      requestAnimationFrame(() => { el.style.opacity = '1'; });
+      state.foods.push({ type, x, y, el, taken: false });
+    }
+
+    function spawnInitialFoods() {
+      state.foods.forEach(f => f.el.remove());
+      state.foods = [];
+      FOOD_SPAWNS.forEach(([x, y], i) => {
+        const types = Object.keys(FOODS);
+        const type = types[i % types.length];
+        makeFood(type, x + rand(-35, 35), y + rand(-30, 30));
+      });
+    }
+
+    function respawnFoods(dt) {
+      state.foodRespawnTimer += dt;
+      if (state.foods.filter(f => !f.taken).length < 8 && state.foodRespawnTimer > 3200) {
+        state.foodRespawnTimer = 0;
+        const free = FOOD_SPAWNS[Math.floor(Math.random() * FOOD_SPAWNS.length)];
+        const types = Object.keys(FOODS);
+        const type = types[Math.floor(Math.random() * types.length)];
+        makeFood(type, free[0] + rand(-25, 25), free[1] + rand(-20, 20));
+      }
+    }
+
+    function updatePlayer(dt) {
+      if (state.isKnockedDown) return;
+      let dx = 0;
+      let dy = 0;
+      if (state.moveLeft) dx -= 1;
+      if (state.moveRight) dx += 1;
+      if (state.moveUp) dy -= 1;
+      if (state.moveDown) dy += 1;
+      const len = Math.hypot(dx, dy) || 1;
+      dx /= len;
+      dy /= len;
+      const moving = dx !== 0 || dy !== 0;
+      state.playerX = clamp(state.playerX + dx * state.playerSpeed * dt * 0.06, 40, WORLD_W - 40);
+      state.playerY = clamp(state.playerY + dy * state.playerSpeed * dt * 0.06, 40, WORLD_H - 40);
+      if (!player.classList.contains('fallen')) {
+        if (dx !== 0) {
+          player.style.transform = `translate(-50%, -50%) scaleX(${dx < 0 ? -1 : 1})`;
+        } else {
+          player.style.transform = 'translate(-50%, -50%)';
+        }
+      }
+      if (moving) {
+        state.stepAudioCooldown -= dt;
+        if (state.stepAudioCooldown <= 0) {
+          playStepSound();
+          state.stepAudioCooldown = 190;
+        }
+      }
+    }
+
+    function updateFoods() {
+      for (const food of [...state.foods]) {
+        if (food.taken) continue;
+        if (dist(state.playerX, state.playerY, food.x, food.y) < 46) {
+          food.taken = true;
+          state.inventory += 1;
+          state.score += FOODS[food.type].points;
+          state.hunger = clamp(state.hunger + FOODS[food.type].effect, 0, 100);
+          food.el.classList.add('bounce');
+          setToast(FOODS[food.type].label + ' gepakt');
+          playPickupSound();
+          setTimeout(() => food.el.remove(), 220);
+          updateHUD();
+        }
+      }
+      state.foods = state.foods.filter(f => !f.taken || f.el.isConnected);
+    }
+
+    function feedEzra() {
+      if (!state.running || state.paused || state.gameOver || state.isKnockedDown) return;
+      if (state.inventory <= 0) {
+        setToast('Geen eten in voorraad');
+        return;
+      }
+      const d = dist(state.playerX, state.playerY, state.enemyX, state.enemyY);
+      if (d > 110) {
+        setToast('Ga dichter bij Ezra staan');
+        return;
+      }
+      state.inventory -= 1;
+      state.hunger = clamp(state.hunger - 24, 0, 100);
+      state.score += 15;
+      setToast('Ezra heeft gegeten');
+      playFeedSound();
+      updateHUD();
+    }
+
+    function enemySpeed() {
+      if (state.hunger >= 100) return 4.2;
+      if (state.hunger > 80) return 3.35;
+      if (state.hunger > 50) return 2.55;
+      return 1.05;
+    }
+
+    function updateEnemy(dt) {
+      const hunger = state.hunger;
+      let targetX = 820 + Math.sin(performance.now() * 0.00045) * 110;
+      let targetY = 720 + Math.cos(performance.now() * 0.00038) * 70;
+      const chasing = hunger > 50;
+
+      if (chasing) {
+        targetX = state.playerX;
+        targetY = state.playerY;
+        state.growlCooldown -= dt;
+        if (state.growlCooldown <= 0) {
+          playGrowlSound();
+          state.growlCooldown = hunger >= 90 ? 850 : 1350;
+        }
+      } else {
+        state.growlCooldown = 0;
+      }
+
+      const dx = targetX - state.enemyX;
+      const dy = targetY - state.enemyY;
+      const d = Math.hypot(dx, dy) || 1;
+      const speed = enemySpeed();
+      const step = Math.min(d, speed * dt * 0.055);
+      state.enemyX += (dx / d) * step;
+      state.enemyY += (dy / d) * step;
+
+      if (dx !== 0) {
+        enemy.style.transform = `translate(-50%, -50%) scaleX(${dx < 0 ? -1 : 1})`;
+      } else {
+        enemy.style.transform = 'translate(-50%, -50%)';
+      }
+
+      const closeEnough = dist(state.playerX, state.playerY, state.enemyX, state.enemyY) < 54;
+      if (closeEnough && hunger >= 100 && !state.isKnockedDown) {
+        knockPlayerDown();
+      }
+    }
+
+    function hungerLogic(dt) {
+      state.hungerTick += dt;
+      const grow = state.inventory > 0 ? 0.0028 : 0.0043;
+      state.hunger = clamp(state.hunger + dt * grow, 0, 100);
+    }
+
+    function knockPlayerDown() {
+      state.isKnockedDown = true;
+      state.enemyAttackTimer = 0;
+      player.classList.add('fallen');
+      playHitSound();
+      setToast('Ezra slaat je neer');
+      setTimeout(() => endGame(false), 900);
+    }
+
+    function loop(ts) {
+      if (!state.running) return;
+      if (!state.lastTime) state.lastTime = ts;
+      const dt = ts - state.lastTime;
+      state.lastTime = ts;
+
+      if (!state.paused && !state.gameOver) {
+        state.timeLeft -= dt / 1000;
+        hungerLogic(dt);
+        updatePlayer(dt);
+        updateEnemy(dt);
+        updateFoods();
+        respawnFoods(dt);
+        positionEntity();
+        updateCamera();
+        updateHUD();
+
+        if (state.timeLeft <= 0) {
+          endGame(true);
+          return;
+        }
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    function startGame() {
+      ensureAudio();
+      state.running = true;
+      state.paused = false;
+      state.gameOver = false;
+      state.isKnockedDown = false;
+      state.score = 0;
+      state.timeLeft = 60;
+      state.hunger = 18;
+      state.inventory = 0;
+      state.playerX = 1080;
+      state.playerY = 980;
+      state.enemyX = 820;
+      state.enemyY = 720;
+      state.foodRespawnTimer = 0;
+      state.lastTime = 0;
+      state.growlCooldown = 0;
+      state.stepAudioCooldown = 0;
+      player.classList.remove('fallen');
+      player.style.transform = 'translate(-50%, -50%)';
+      spawnInitialFoods();
+      startOverlay.style.display = 'none';
+      gameOverOverlay.style.display = 'none';
+      pauseBtn.textContent = 'Pauze';
+      positionEntity();
+      updateCamera();
+      updateHUD();
+      requestAnimationFrame(loop);
+    }
+
+    function endGame(win) {
+      state.gameOver = true;
+      state.running = false;
+      gameOverOverlay.style.display = 'grid';
+      if (win) {
+        gameOverTitle.textContent = 'Gewonnen!';
+        gameOverText.textContent = 'Je hebt Ezra lang genoeg gevoerd. Eindscore: ' + state.score + '.';
+      } else {
+        gameOverTitle.textContent = 'Af!';
+        gameOverText.textContent = state.isKnockedDown
+          ? 'Ezra bereikte 100% honger, sloeg je neer en je viel om. Eindscore: ' + state.score + '.'
+          : 'Ezra heeft je gepakt. Eindscore: ' + state.score + '.';
+      }
+    }
+
+    function togglePause() {
+      if (!state.running || state.gameOver) return;
+      state.paused = !state.paused;
+      pauseBtn.textContent = state.paused ? 'Verder' : 'Pauze';
+      if (!state.paused) {
+        state.lastTime = 0;
+        requestAnimationFrame(loop);
+      }
+    }
+
+    function setMove(dir, pressed) {
+      if (dir === 'left') state.moveLeft = pressed;
+      if (dir === 'right') state.moveRight = pressed;
+      if (dir === 'up') state.moveUp = pressed;
+      if (dir === 'down') state.moveDown = pressed;
+    }
+
+    document.getElementById('startBtn').addEventListener('click', () => { ensureAudio(); startGame(); });
+    document.getElementById('restartBtn').addEventListener('click', () => { ensureAudio(); startGame(); });
+    pauseBtn.addEventListener('click', togglePause);
+    feedBtn.addEventListener('click', () => { ensureAudio(); feedEzra(); });
+
+    const btnMap = [
+      ['leftBtn', 'left'], ['rightBtn', 'right'], ['upBtn', 'up'], ['downBtn', 'down']
+    ];
+
+    btnMap.forEach(([id, dir]) => {
+      const el = document.getElementById(id);
+      [['pointerdown', true], ['pointerup', false], ['pointercancel', false], ['pointerleave', false]].forEach(([ev, pressed]) => {
+        el.addEventListener(ev, e => { e.preventDefault(); setMove(dir, pressed); });
+      });
+    });
+
+    window.addEventListener('keydown', e => {
+      const key = e.key.toLowerCase();
+      if (e.key === 'ArrowLeft' || key === 'a') state.moveLeft = true;
+      if (e.key === 'ArrowRight' || key === 'd') state.moveRight = true;
+      if (e.key === 'ArrowUp' || key === 'w') state.moveUp = true;
+      if (e.key === 'ArrowDown' || key === 's') state.moveDown = true;
+      if (e.key === ' ') { e.preventDefault(); feedEzra(); }
+      if (key === 'p') togglePause();
+    });
+
+    window.addEventListener('keyup', e => {
+      const key = e.key.toLowerCase();
+      if (e.key === 'ArrowLeft' || key === 'a') state.moveLeft = false;
+      if (e.key === 'ArrowRight' || key === 'd') state.moveRight = false;
+      if (e.key === 'ArrowUp' || key === 'w') state.moveUp = false;
+      if (e.key === 'ArrowDown' || key === 's') state.moveDown = false;
+    });
+
+    window.addEventListener('resize', updateCamera);
+    app.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+    app.addEventListener('dblclick', e => e.preventDefault());
+
+    positionEntity();
+    updateCamera();
+    updateHUD();
+  </script>
+</body>
+</html>
