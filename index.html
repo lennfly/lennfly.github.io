@@ -27,6 +27,7 @@
       --orb-rgb: 126, 162, 134;
       --shadow: 0 20px 50px rgba(91, 112, 98, 0.08);
       --shadow-strong: 0 25px 60px rgba(91, 112, 98, 0.10);
+      --orb-ui: #4f6154;
     }
 
     * {
@@ -344,13 +345,9 @@
       position: absolute;
       inset: 0;
       border-radius: 50%;
-      background: radial-gradient(circle at center,
-        rgba(var(--orb-rgb), 0.82) 0%,
-        rgba(var(--orb-rgb), 0.55) 45%,
-        rgba(var(--orb-rgb), 0.25) 75%,
-        transparent 100%);
-      filter: blur(8px);
-      box-shadow: 0 0 90px rgba(var(--orb-rgb), 0.24);
+      background: rgba(var(--orb-rgb), 0.22);
+      border: 6px solid rgba(var(--orb-rgb), 0.92);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
       transform: scale(0.5);
       transition-property: transform;
       transition-timing-function: linear;
@@ -386,24 +383,28 @@
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.18em;
-      color: rgba(247,245,239,0.88);
+      color: var(--orb-ui);
       font-weight: 500;
       max-width: 180px;
       line-height: 1.4;
+      text-shadow: 0 1px 0 rgba(255,255,255,0.25);
     }
 
     .stop-btn {
       padding: 12px 22px;
       border-radius: 999px;
-      border: 1px solid rgba(247,245,239,0.45);
-      background: rgba(247,245,239,0.10);
-      color: var(--button-text);
+      border: 1px solid rgba(79,97,84,0.28);
+      background: rgba(255,255,255,0.34);
+      color: var(--orb-ui);
       backdrop-filter: blur(6px);
       font-size: 15px;
       font-weight: 500;
+      box-shadow: 0 6px 18px rgba(79,97,84,0.08);
     }
 
-    .stop-btn:hover { background: rgba(247,245,239,0.16); }
+    .stop-btn:hover {
+      background: rgba(255,255,255,0.46);
+    }
 
     .progress {
       margin-top: 24px;
@@ -606,6 +607,8 @@
     const SECOND_OPTIONS = [4, 5, 6, 7, 8];
     const DURATION_OPTIONS = [5, 10];
     const TOUCH_HOLD_MS = 180;
+    const ORB_MIN_SCALE = 0.5;
+    const ORB_MAX_SCALE = 1;
 
     const state = {
       phases: createDefaultPhases(),
@@ -620,6 +623,10 @@
       phaseEndAt: 0,
       sessionEndAt: 0,
       audioContext: null,
+      currentOscillators: [],
+      currentGain: null,
+      currentLfo: null,
+      currentLfoGain: null,
       mobileMenuOpen: false,
       touch: {
         sourceId: null,
@@ -723,8 +730,26 @@
 
     function setVisualForPhase(phase) {
       if (!phase) return;
-      if (phase.type === "inhale") setOrbScale(1, phase.seconds);
-      if (phase.type === "exhale") setOrbScale(0.5, phase.seconds);
+
+      if (phase.type === "inhale") {
+        setOrbScale(ORB_MAX_SCALE, phase.seconds);
+      }
+
+      if (phase.type === "exhale") {
+        setOrbScale(ORB_MIN_SCALE, phase.seconds);
+      }
+
+      if (phase.type === "hold") {
+        const currentTransform = window.getComputedStyle(els.orbInner).transform;
+        const currentTransition = els.orbInner.style.transitionDuration;
+        els.orbInner.style.transitionDuration = "0s";
+        els.orbInner.style.transform = currentTransform === "none"
+          ? `scale(${ORB_MIN_SCALE})`
+          : currentTransform;
+        requestAnimationFrame(() => {
+          els.orbInner.style.transitionDuration = currentTransition || "0s";
+        });
+      }
     }
 
     function ensureAudioContext() {
@@ -735,56 +760,143 @@
       return state.audioContext;
     }
 
-    function playTone(type) {
+    function stopCurrentTone() {
+      const ctx = state.audioContext;
+      if (!ctx) return;
+
+      const now = ctx.currentTime;
+
+      if (state.currentGain) {
+        try {
+          state.currentGain.gain.cancelScheduledValues(now);
+          state.currentGain.gain.setTargetAtTime(0.0001, now, 0.06);
+        } catch (e) {}
+      }
+
+      state.currentOscillators.forEach((osc) => {
+        try {
+          osc.stop(now + 0.12);
+        } catch (e) {}
+      });
+
+      if (state.currentLfo) {
+        try {
+          state.currentLfo.stop(now + 0.12);
+        } catch (e) {}
+      }
+
+      state.currentOscillators = [];
+      state.currentGain = null;
+      state.currentLfo = null;
+      state.currentLfoGain = null;
+    }
+
+    function playTransitionClick() {
       const ctx = ensureAudioContext();
       if (!ctx) return;
 
       const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(260, now);
+      osc.frequency.exponentialRampToValueAtTime(180, now + 0.09);
+
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(520, now);
+      filter.Q.setValueAtTime(0.18, now);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.022, now + 0.014);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.13);
+    }
+
+    function playTone(type, durationSeconds) {
+      const ctx = ensureAudioContext();
+      if (!ctx) return;
+
+      stopCurrentTone();
+
+      const safeDuration = Math.max(0.4, durationSeconds);
+      const now = ctx.currentTime;
+      const endAt = now + safeDuration;
+
       const master = ctx.createGain();
       const oscA = ctx.createOscillator();
       const oscB = ctx.createOscillator();
       const filter = ctx.createBiquadFilter();
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
 
       filter.type = "lowpass";
-      filter.frequency.setValueAtTime(700, now);
-      filter.Q.setValueAtTime(0.15, now);
+      filter.frequency.setValueAtTime(360, now);
+      filter.Q.setValueAtTime(0.04, now);
 
       master.gain.setValueAtTime(0.0001, now);
-      master.gain.exponentialRampToValueAtTime(0.015, now + 0.45);
-      master.gain.exponentialRampToValueAtTime(0.01, now + 1.4);
-      master.gain.exponentialRampToValueAtTime(0.0001, now + 2.8);
+
+      const attack = Math.min(1.0, safeDuration * 0.24);
+      const release = Math.min(1.2, safeDuration * 0.28);
+      const sustainLevel = 0.018;
+      const sustainStart = now + attack;
+      const releaseStart = Math.max(sustainStart, endAt - release);
+
+      master.gain.linearRampToValueAtTime(sustainLevel, sustainStart);
+      master.gain.setValueAtTime(sustainLevel, releaseStart);
+      master.gain.linearRampToValueAtTime(0.0001, endAt);
+
+      oscA.type = "sine";
+      oscB.type = "triangle";
 
       if (type === "inhale") {
-        oscA.type = "sine";
-        oscB.type = "triangle";
-        oscA.frequency.setValueAtTime(220, now);
-        oscA.frequency.exponentialRampToValueAtTime(270, now + 1.8);
-        oscB.frequency.setValueAtTime(110, now);
-        oscB.frequency.exponentialRampToValueAtTime(135, now + 1.8);
+        oscA.frequency.setValueAtTime(96, now);
+        oscA.frequency.linearRampToValueAtTime(112, endAt);
+        oscB.frequency.setValueAtTime(144, now);
+        oscB.frequency.linearRampToValueAtTime(168, endAt);
       } else if (type === "exhale") {
-        oscA.type = "sine";
-        oscB.type = "triangle";
-        oscA.frequency.setValueAtTime(240, now);
-        oscA.frequency.exponentialRampToValueAtTime(170, now + 1.9);
-        oscB.frequency.setValueAtTime(120, now);
-        oscB.frequency.exponentialRampToValueAtTime(85, now + 1.9);
+        oscA.frequency.setValueAtTime(112, now);
+        oscA.frequency.linearRampToValueAtTime(92, endAt);
+        oscB.frequency.setValueAtTime(168, now);
+        oscB.frequency.linearRampToValueAtTime(138, endAt);
       } else {
-        oscA.type = "sine";
-        oscB.type = "sine";
-        oscA.frequency.setValueAtTime(185, now);
-        oscA.frequency.linearRampToValueAtTime(195, now + 1.4);
-        oscB.frequency.setValueAtTime(92, now);
-        oscB.frequency.linearRampToValueAtTime(97, now + 1.4);
+        oscA.frequency.setValueAtTime(90, now);
+        oscA.frequency.setValueAtTime(90, endAt);
+        oscB.frequency.setValueAtTime(135, now);
+        oscB.frequency.setValueAtTime(135, endAt);
       }
+
+      lfo.type = "sine";
+      lfo.frequency.setValueAtTime(0.08, now);
+      lfoGain.gain.setValueAtTime(0.8, now);
+
+      lfo.connect(lfoGain);
+      lfoGain.connect(filter.frequency);
 
       oscA.connect(filter);
       oscB.connect(filter);
       filter.connect(master);
       master.connect(ctx.destination);
+
       oscA.start(now);
       oscB.start(now);
-      oscA.stop(now + 2.9);
-      oscB.stop(now + 2.9);
+      lfo.start(now);
+
+      oscA.stop(endAt + 0.04);
+      oscB.stop(endAt + 0.04);
+      lfo.stop(endAt + 0.04);
+
+      state.currentOscillators = [oscA, oscB];
+      state.currentGain = master;
+      state.currentLfo = lfo;
+      state.currentLfoGain = lfoGain;
     }
 
     function stopSession() {
@@ -792,15 +904,16 @@
         clearInterval(state.timerId);
         state.timerId = null;
       }
+      stopCurrentTone();
       state.isRunning = false;
       state.currentPhaseIndex = 0;
       state.phaseRemaining = 0;
       state.sessionRemaining = 0;
-      setOrbScale(0.5, 0);
+      setOrbScale(ORB_MIN_SCALE, 0);
       render();
     }
 
-    function goToPhase(index) {
+    function goToPhase(index, withClick = true) {
       const phase = state.phases[index];
       if (!phase) return;
 
@@ -808,11 +921,12 @@
       state.phaseRemaining = phase.seconds;
       state.phaseEndAt = Date.now() + phase.seconds * 1000;
 
-      if (phase.type !== "hold") {
-        requestAnimationFrame(() => setVisualForPhase(phase));
+      if (withClick) {
+        playTransitionClick();
       }
 
-      playTone(phase.type);
+      requestAnimationFrame(() => setVisualForPhase(phase));
+      playTone(phase.type, phase.seconds);
       render();
     }
 
@@ -827,12 +941,12 @@
       state.sessionEndAt = Date.now() + getSessionSeconds() * 1000;
 
       const first = state.phases[0];
-      if (first?.type === "inhale") setOrbScale(0.5, 0);
-      if (first?.type === "exhale") setOrbScale(1, 0);
-      if (first?.type === "hold") setOrbScale(0.5, 0);
+      if (first?.type === "inhale") setOrbScale(ORB_MIN_SCALE, 0);
+      if (first?.type === "exhale") setOrbScale(ORB_MAX_SCALE, 0);
+      if (first?.type === "hold") setOrbScale(ORB_MIN_SCALE, 0);
 
       state.currentPhaseIndex = 0;
-      goToPhase(0);
+      goToPhase(0, true);
       state.timerId = window.setInterval(tickSession, 200);
     }
 
@@ -853,7 +967,7 @@
 
       if (phaseLeft <= 0) {
         const nextIndex = (state.currentPhaseIndex + 1) % state.phases.length;
-        goToPhase(nextIndex);
+        goToPhase(nextIndex, true);
         return;
       }
 
@@ -1164,7 +1278,7 @@
       renderPhaseLists();
       renderDurationButtons();
       renderOrbContent();
-      els.currentPhaseText.textContent = currentPhase ? currentPhase.label : TEXT.ready;
+      els.currentPhaseText.textContent = state.isRunning && currentPhase ? currentPhase.label : TEXT.ready;
       els.sessionTopText.textContent = state.isRunning ? formatTime(state.sessionRemaining) : `${state.durationMinutes} ${TEXT.minutes} ${TEXT.session}`;
       els.progressBar.style.width = `${Math.max(0, Math.min(100, getSessionProgress()))}%`;
       els.cycleValue.textContent = `${getTotalCycleSeconds()}s`;
@@ -1202,7 +1316,7 @@
       }
     });
 
-    setOrbScale(0.5, 0);
+    setOrbScale(ORB_MIN_SCALE, 0);
     syncMobileMenu();
     render();
   </script>
